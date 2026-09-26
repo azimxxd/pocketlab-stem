@@ -46,14 +46,17 @@ export type MotionSample = z.infer<typeof motionSampleSchema>;
 export * from './pendulum';
 export * from './bottle';
 export * from './motion';
+export * from './video';
 import { pendulumInvestigationSchema } from './pendulum';
 import { bottleInvestigationSchema } from './bottle';
 import { motionInvestigationSchema, motionSampleSchema } from './motion';
+import { videoInvestigationSchema } from './video';
 // v1 audio records remain readable without a destructive storage migration.
 export const notebookRecordSchema = z.union([
   investigationSchema,
   pendulumInvestigationSchema,
   bottleInvestigationSchema,
   motionInvestigationSchema,
+  videoInvestigationSchema,
 ]);
 export type NotebookRecord = z.infer<typeof notebookRecordSchema>;

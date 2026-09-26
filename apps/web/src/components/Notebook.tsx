@@ -17,16 +17,20 @@ import { Spectrum } from './Spectrum';
 import { PendulumResults } from './PendulumResults';
 import { BottleResults } from './BottleResults';
 import { MotionReview } from './MotionReview';
+import { VideoResults } from './video/VideoResults';
+import { fmt } from './discovery/ModelDiscovery';
 export const scenarioTitles: Record<NotebookRecord['scenarioId'], string> = {
   'sound-01': 'Увидь свой голос',
   'pendulum-01': 'Открой закон маятника',
   'bottle-01': 'Собери музыкальный инструмент',
   'motion-01': 'Что чувствует телефон?',
+  'video-01': 'Видео: гравитация и отскок',
 };
 function sourceLabel(item: NotebookRecord) {
   if (item.provenance === 'simulation') return 'СИМУЛЯЦИЯ';
   if (item.scenarioId === 'pendulum-01') return 'РУЧНЫЕ ИЗМЕРЕНИЯ';
   if (item.scenarioId === 'motion-01') return 'ДАТЧИКИ';
+  if (item.scenarioId === 'video-01') return 'РАЗМЕТКА ВИДЕО';
   return item.provenance === 'manual' ? 'РУЧНОЙ ВВОД' : 'МИКРОФОН';
 }
 export function Notebook({
@@ -110,6 +114,55 @@ export function Notebook({
       setError('Не удалось удалить запись. Попробуй ещё раз.');
     }
   }
+  if (selected?.scenarioId === 'video-01')
+    return (
+      <>
+        <button className="back" onClick={() => setSelected(null)}>
+          <ArrowLeft size={16} />
+          Дневник
+        </button>
+        <div className="eyebrow">СОХРАНЁННАЯ РАЗМЕТКА · {sourceLabel(selected)}</div>
+        <h1>{selected.mode === 'flight' ? 'Поймай гравитацию' : 'Исследуй отскок'}</h1>
+        <p className="intro">
+          {new Date(selected.createdAt).toLocaleString('ru-RU')}
+          {selected.video &&
+            ` · ${selected.video.name} · ${selected.video.width}×${selected.video.height} · время кадров: ${selected.video.timebase === 'container' ? 'из файла' : 'неизвестно'}`}
+        </p>
+        <div className="white-card">
+          <h2>Гипотеза</h2>
+          <p>{selected.hypothesis}</p>
+          <h2>Твой вывод</h2>
+          <p>{selected.conclusion || 'Вывод ещё не записан.'}</p>
+          <div className="result-actions">
+            <button className="secondary" onClick={() => download(selected, 'json')}>
+              <Download size={16} />
+              JSON
+            </button>
+            <button className="secondary" onClick={() => download(selected, 'csv')}>
+              CSV
+            </button>
+          </div>
+          <p className="subtle">Видео не сохранялось: здесь только отметки, масштаб и анализ.</p>
+        </div>
+        <VideoResults
+          mode={selected.mode}
+          points={selected.points}
+          flight={selected.flight}
+          bounce={selected.bounce}
+          metersPerPx={
+            selected.scale
+              ? selected.scale.lengthM /
+                Math.hypot(
+                  selected.scale.p2.x - selected.scale.p1.x,
+                  selected.scale.p2.y - selected.scale.p1.y,
+                )
+              : null
+          }
+          timeFactor={selected.timeFactor}
+          contactT={selected.points.find((p) => p.frame === selected.contactFrame)?.t}
+        />
+      </>
+    );
   if (selected?.scenarioId === 'motion-01')
     return (
       <>
@@ -340,9 +393,13 @@ export function Notebook({
                 <span>
                   {item.scenarioId === 'sound-01'
                     ? `${item.analysis.peakHz?.toFixed(0) ?? '—'} Гц · ${item.analysis.duration.toFixed(1)} с`
-                    : item.scenarioId === 'motion-01'
-                      ? `${item.analysis.durationS.toFixed(1)} с · ${item.analysis.movements.length} движений`
-                      : `${item.trials.length} попыток · версия ${item.revision}`}
+                    : item.scenarioId === 'video-01'
+                      ? item.mode === 'flight'
+                        ? `${item.points.length} отметок · g ${item.flight.g !== null ? `≈ ${fmt(item.flight.g, 2)} м/с²` : 'не оценено'}`
+                        : `${item.points.length} отметок · h₂/h₁ ${item.bounce?.ratio != null ? fmt(item.bounce.ratio, 2) : '—'}`
+                      : item.scenarioId === 'motion-01'
+                        ? `${item.analysis.durationS.toFixed(1)} с · ${item.analysis.movements.length} движений`
+                        : `${item.trials.length} попыток · версия ${item.revision}`}
                 </span>
               </div>
               <div className="result-actions">

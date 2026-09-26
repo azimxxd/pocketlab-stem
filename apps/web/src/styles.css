@@ -1176,6 +1176,120 @@ textarea {
   color: var(--muted);
   max-width: 760px;
 }
+.video-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.video-info span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.video-info b {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.speed-choice {
+  border: 0;
+  padding: 0;
+  margin: 18px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.speed-choice legend {
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.speed-choice small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.inline-field input:not([type='checkbox']),
+.inline-field select {
+  width: 90px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+.video-workspace {
+  margin-top: 20px;
+}
+.video-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+}
+.tool-hint {
+  font-size: 13px;
+  color: var(--ink);
+}
+.video-stage {
+  position: relative;
+  margin: 0 auto;
+  background: #0b1a19;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+}
+.video-stage video,
+.video-stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.video-stage canvas {
+  cursor: crosshair;
+  touch-action: none;
+}
+.frame-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.frame-controls input[type='range'] {
+  flex: 1;
+  min-width: 140px;
+  accent-color: #3c6542;
+}
+.frame-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.video-results {
+  margin-top: 30px;
+}
+.video-plots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.video-plot svg {
+  width: 100%;
+  height: auto;
+  font-size: 12px;
+  fill: #9fb5ae;
+}
 @media (min-width: 1500px) {
   main {
     padding-top: 48px;

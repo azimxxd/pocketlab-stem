@@ -19,7 +19,8 @@ E0: desktop browser capability work started; real iPhone/Android tests and video
 E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
 E3: manual pendulum (M1), S2 bottle resonance series, M2 phone sensors, shared model-discovery engine and JSON import implemented. Gyro/video pendulum modes and real-apparatus/phone validation remain open.
-E4–E7: not implemented.
+E4: video lab with container timing and manual annotation implemented (V1 flight/g, V2 bounce h₂/h₁). Automatic tracking, in-app camera recording and real-clip validation remain open.
+E5–E7: not implemented.
 
 ## Added in the mobile-readiness iteration
 
@@ -51,6 +52,18 @@ E4–E7: not implemented.
 - Analysis `motion-v1` (`packages/physics/motion.ts`): rate and gaps from timestamps; still intervals (0.5 s window, per-component SD ≤ 0.12 m/s², |ω| ≤ 4 °/s, ≥ 0.8 s); measured |a| at rest with spread (never a reference g); movements between still intervals comparing gravity tilt (angle between mean gravity vectors — independent of the iOS/Android sign convention) with the trapezoidal gyroscope integral about the dominant axis. Rotation about the vertical is shown as invisible to the accelerometer. Missing channels stay null (`NULL_SENSOR`, `NO_ROTATION_SENSOR`).
 - Review with replay cursor, values at cursor, movement table with hedged explanations, quality reasons and method notes; labelled synthetic recording (9 s, 100 Hz). Notebook shows, replays and exports M2 records (CSV with empty cells for missing values, JSON).
 
+## Added in the E4 (video, manual annotation) iteration
+
+- Own ISO BMFF timing reader (`packages/media/mp4-timing.ts`): finds `moov` by reading only box headers (moov before or after mdat, 64-bit sizes), then frame presentation times from stts + ctts (B-frame reordering, signed v1 offsets) + edit list (empty-edit delay, media start/end). Remapping edit lists (e.g. slow-motion segments), fragmented files, missing video tracks and malformed boxes are reported; no nominal fps is ever assumed. No third-party demuxer.
+- Import (`accept="video/*"`, which also offers the phone camera): ≤100 MB, ≤30 s, decoded locally, never uploaded or stored. Info card: resolution, duration, frame count, median interval, variable-rate flag, timing source, live frame verification. Non-MP4/MOV or unusable timing ⇒ frames are browsable at nominal steps but acceleration is disabled.
+- Frame-accurate stepping: seek to the middle of each frame's presentation interval; where `requestVideoFrameCallback` exists, the presented frame's media time is compared with the container table and any mismatch disables quantitative results.
+- Playback speed must be declared (real time / slow motion ×k / unknown). Unknown ⇒ no g.
+- Workspace: scale tool (two taps + length and its bound), ball marks per frame with auto-advance (1/2/3/5), «сомнительная» flag, delete, contact frame for bounces; canvas overlay of scale, marks and trajectory; marks in displayed video pixels.
+- V1 (`flight-v1`): least-squares parabolas for x(t) and y(t) on real (factor-corrected) times; |a| is roll-invariant and its direction reports camera tilt; fit spread and scale bound shown separately; g only when time, scale, point count/interval and model fit are acceptable. Lack of fit (bounce/contact in interval) disables g.
+- V2 (`bounce-v1`): parabola per arc around the marked contact, apex heights above the contact position, h₂/h₁ (scale- and time-unit-independent) and e ≈ √(h₂/h₁) as a labelled model estimate; extrapolated apex and rebound higher than drop flagged.
+- Records `video-01` store file metadata, timing source/issues, speed, scale, marks and analysis — never media or blob URLs. Notebook view, CSV (pixels, media time, real time, metres) and JSON.
+- Labs are lazy-loaded chunks (initial JS 470 → 351 kB); all chunks remain precached for offline.
+
 ## Next bounded implementation tasks
 
 1. Provision a trusted HTTPS dev URL and complete iPhone/Android permission, cadence and lifecycle matrix; use actual phones.
@@ -59,7 +72,7 @@ E4–E7: not implemented.
 4. Validate M1, S2 and M2 with real apparatus and phones (tone plateau and stillness thresholds are engineering guesses; rotationRate units/axes differ across browsers). Then implement gyro/video-based pendulum timing, reusing the M2 recorder.
 5. Offline shell and JSON import are done; add PDF report and global storage quota handling.
 7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
-6. Perform video PTS/codec spike, then calibrated manual annotation. Backend/classroom/AI follow stable evidence contracts.
+6. Video: test real iPhone MOV/HEVC and Android MP4 clips (edit lists, rotation, slow motion, seek accuracy on Safari), then the local tracker (ROI colour/template tracking in a Worker with explicit loss and manual correction). Backend/classroom/AI follow stable evidence contracts.
 
 ## Known limitations
 

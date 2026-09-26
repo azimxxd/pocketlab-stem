@@ -128,6 +128,30 @@ function csv(item: NotebookRecord) {
           ].join(','),
         ),
       ];
+    case 'video-01': {
+      const s = item.scale
+        ? item.scale.lengthM /
+          Math.hypot(item.scale.p2.x - item.scale.p1.x, item.scale.p2.y - item.scale.p1.y)
+        : null;
+      const first = item.points[0];
+      return [
+        '# provenance=' + item.provenance + '; mode=' + item.mode,
+        `# time_factor=${item.timeFactor ?? 'unknown'}; metres_per_px=${s ?? 'no scale'}; y up, relative to the first mark`,
+        'frame,t_media_s,x_px,y_px,t_s,x_m,y_m,uncertain',
+        ...item.points.map((p) =>
+          [
+            p.frame,
+            p.t,
+            p.x,
+            p.y,
+            item.timeFactor ? (p.t - first.t) / item.timeFactor : '',
+            s ? (p.x - first.x) * s : '',
+            s ? -(p.y - first.y) * s : '',
+            p.uncertain,
+          ].join(','),
+        ),
+      ];
+    }
     case 'motion-01':
       return [
         '# provenance=' + item.provenance,
