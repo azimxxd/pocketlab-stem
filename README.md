@@ -26,8 +26,11 @@ PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 
 ### Deploy
 
+Every push to `main` deploys automatically: the `deploy` job in `.github/workflows/checks.yml` runs only after build, unit and browser tests pass, then `vercel pull → build → deploy --prebuilt --prod`. Pull requests are checked but never deployed. Repository settings it needs: secret `VERCEL_TOKEN` (a Vercel access token), variables `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (from `.vercel/project.json`).
+
+Manual deploy from a linked checkout, if ever needed:
+
 ```sh
-npm run build && npm test && PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 npx vercel@60 deploy --prod
 ```
 

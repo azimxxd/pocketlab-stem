@@ -10,5 +10,5 @@ Read docs/PLAN_SMARTPHONE_LAB.md before changing scope. The app is a static PWA 
 - Keep Russian user-facing copy clear. Future labs are visibly unavailable until implemented.
 - Run npm run build, npm test and npm run test:e2e for changes to capture or analysis flows.
 - Update docs/STATUS.md and docs/VALIDATION.md with real evidence and unresolved checks.
-- Deploy only after build, unit and browser tests pass: `npx vercel@60 deploy --prod`. Keep `vercel.json` headers strict (CSP self-only); check `npm run preview`, which serves the same headers, for violations first.
+- Production deploys happen from CI on push to main after all checks pass; do not bypass failing checks with a manual `vercel deploy --prod`. Keep `vercel.json` headers strict (CSP self-only); check `npm run preview`, which serves the same headers, for violations first.
 - Do not add cloud services, secrets or accounts to the client. Future backend work (classroom, AI) lives in its own API with its own review.
