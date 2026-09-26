@@ -35,21 +35,9 @@ test('permission denial has an actionable fallback', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Демосигнал', exact: true })).toBeEnabled();
 });
 test('motion diagnoses actual events, not API presence', async ({ page }) => {
-  // Headless Linux Chromium (CI) may not expose DeviceMotionEvent at all. The test injects its own
-  // synthetic events either way, so provide a minimal constructor only when the browser lacks one.
-  await page.addInitScript(() => {
-    if (typeof DeviceMotionEvent !== 'undefined') return;
-    class FakeDeviceMotionEvent extends Event {
-      accelerationIncludingGravity: unknown;
-      rotationRate: unknown;
-      constructor(type: string, init: Record<string, unknown> = {}) {
-        super(type);
-        this.accelerationIncludingGravity = init.accelerationIncludingGravity ?? null;
-        this.rotationRate = init.rotationRate ?? null;
-      }
-    }
-    Object.assign(window, { DeviceMotionEvent: FakeDeviceMotionEvent });
-  });
+  // Newer Chromium implements DeviceMotionEvent.requestPermission(); headless denies it unless the
+  // sensors are granted. Events below are synthetic, not hardware.
+  await page.context().grantPermissions(['accelerometer', 'gyroscope']);
   await page.goto('/#diagnostics');
   await page.getByRole('button', { name: 'Проверить движение' }).click();
   await expect(page.locator('.diagnostic-values')).toBeVisible();
@@ -65,6 +53,15 @@ test('motion diagnoses actual events, not API presence', async ({ page }) => {
   });
   await expect(page.getByText('Получены данные')).toHaveCount(2);
   await expect(page.getByText('9.80 м/с²')).toBeVisible();
+});
+test('denied motion permission is reported, not treated as missing data', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(DeviceMotionEvent, { requestPermission: async () => 'denied' });
+  });
+  await page.goto('/#diagnostics');
+  await page.getByRole('button', { name: 'Проверить движение' }).click();
+  await expect(page.getByRole('alert')).toContainText('Доступ к движению отклонён');
+  await expect(page.locator('.diagnostic-values')).toHaveCount(0);
 });
 test('360px layout stays within viewport', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
