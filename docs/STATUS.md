@@ -18,7 +18,7 @@
 E0: desktop browser capability work started; real iPhone/Android tests and video codec/timebase spike are outstanding. No phone hardware has been tested by the agent.
 E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
-E3: manual pendulum, S2 bottle resonance series, shared model-discovery engine and JSON import implemented; M2, gyro/video pendulum modes and real-apparatus validation remain open.
+E3: manual pendulum (M1), S2 bottle resonance series, M2 phone sensors, shared model-discovery engine and JSON import implemented. Gyro/video pendulum modes and real-apparatus/phone validation remain open.
 E4–E7: not implemented.
 
 ## Added in the mobile-readiness iteration
@@ -43,12 +43,20 @@ E4–E7: not implemented.
 - Models f = c, f = aV + b, f = a/√V compared on the f scale; f² = k/V + b shown separately as «f²·V = const» check. Scenario `bottle-01`, schema v2, algorithm `bottle-v1` / `steady-tone-v1`.
 - Notebook: bottle records listed, opened, resumed, exported as CSV (SI units) and JSON. JSON import (single record or array, ≤5 MB): schema validation, invalid rows counted and skipped, identical records not duplicated, conflicting IDs imported as a copy instead of overwriting.
 
+## Added in the M2 iteration
+
+- M2 «Что чувствует телефон?»: hypothesis about a phone at rest (0 vs ≈9,8 vs depends) before recording; schematic of device axes; guided «покой → наклон → покой → поворот вокруг вертикали → покой».
+- Streaming recorder (`recordMotion`): permission as the first await of the tap (iOS), event timestamps in seconds from the first event, non-increasing events dropped, limits 60 s / 12 000 events, listener always removed; median `event.interval` kept as a diagnostic only. Screen wake lock during recording; hiding the page interrupts it. Events arriving with every field null (desktop Chrome without sensors) are reported as «no data», not analysed.
+- Live screen: 10-second rolling charts of a(x, y, z, |a|) and ω(x, y, z), current values and a quasi-static «Покой/Движение» indicator, redrawn at ~12 Hz from a buffer independent of the sensor rate.
+- Analysis `motion-v1` (`packages/physics/motion.ts`): rate and gaps from timestamps; still intervals (0.5 s window, per-component SD ≤ 0.12 m/s², |ω| ≤ 4 °/s, ≥ 0.8 s); measured |a| at rest with spread (never a reference g); movements between still intervals comparing gravity tilt (angle between mean gravity vectors — independent of the iOS/Android sign convention) with the trapezoidal gyroscope integral about the dominant axis. Rotation about the vertical is shown as invisible to the accelerometer. Missing channels stay null (`NULL_SENSOR`, `NO_ROTATION_SENSOR`).
+- Review with replay cursor, values at cursor, movement table with hedged explanations, quality reasons and method notes; labelled synthetic recording (9 s, 100 Hz). Notebook shows, replays and exports M2 records (CSV with empty cells for missing values, JSON).
+
 ## Next bounded implementation tasks
 
 1. Provision a trusted HTTPS dev URL and complete iPhone/Android permission, cadence and lifecycle matrix; use actual phones.
 2. Extend the scenario-specific v2 Investigation/Trial/Analysis pattern to audio and future scenarios; preserve existing v1 audio records.
 3. Move reproducible audio analysis to AudioWorklet + Worker; validated STFT normalization and richer quality metrics.
-4. Validate the manual pendulum and S2 bottle with real apparatus and phones (tone plateau thresholds are engineering guesses); add M2 sensor visualization. Then implement sensor/video-based pendulum timing.
+4. Validate M1, S2 and M2 with real apparatus and phones (tone plateau and stillness thresholds are engineering guesses; rotationRate units/axes differ across browsers). Then implement gyro/video-based pendulum timing, reusing the M2 recorder.
 5. Offline shell and JSON import are done; add PDF report and global storage quota handling.
 7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
 6. Perform video PTS/codec spike, then calibrated manual annotation. Backend/classroom/AI follow stable evidence contracts.

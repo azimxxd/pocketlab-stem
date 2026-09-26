@@ -1,7 +1,9 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react';
 import { Check, ChartNoAxesCombined } from 'lucide-react';
 import type { DiscoveryStatus, Params } from '../../../../../packages/physics/discovery';
-export const fmt = (n: number, d = 2) => n.toLocaleString('ru-RU', { maximumFractionDigits: d });
+/** Russian number format; values that round to zero print as 0, never −0. */
+export const fmt = (n: number, d = 2) =>
+  (Math.abs(n) < 0.5 * 10 ** -d ? 0 : n).toLocaleString('ru-RU', { maximumFractionDigits: d });
 export type DiscoveryModel<M extends string> = {
   id: M;
   name: string;

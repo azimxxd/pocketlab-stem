@@ -1109,6 +1109,73 @@ textarea {
   margin-top: 15px;
   font-size: 13px;
 }
+.motion-instrument {
+  margin: 18px 0;
+}
+.motion-chart + .motion-chart {
+  margin-top: 16px;
+}
+.motion-chart canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1000 / 260;
+  display: block;
+  border: 1px solid #ffffff10;
+  border-radius: 3px;
+}
+.motion-legend {
+  display: flex;
+  gap: 12px;
+}
+.motion-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.motion-legend i {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+.motion-values strong {
+  font-size: 20px;
+}
+.motion-cursor {
+  display: block;
+  color: #b8cdc6;
+  font-size: 12px;
+  margin-top: 14px;
+}
+.motion-cursor input {
+  display: block;
+  width: 100%;
+  accent-color: #c2f77e;
+}
+.motion-heading {
+  margin-top: 34px;
+}
+.motion-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+}
+.motion-results h3 {
+  font-size: 22px;
+  margin: 8px 0;
+  font-variant-numeric: tabular-nums;
+}
+.motion-results p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.motion-movements {
+  margin-top: 30px;
+}
+.motion-movements > p {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 760px;
+}
 @media (min-width: 1500px) {
   main {
     padding-top: 48px;

@@ -42,19 +42,18 @@ export const investigationSchema = z.object({
 });
 export type Investigation = z.infer<typeof investigationSchema>;
 export type Vec3 = { x: number; y: number; z: number };
-export type MotionSample = {
-  t: number;
-  accelerationWithGravity: Vec3 | null;
-  rotationRate: { alpha: number; beta: number; gamma: number } | null;
-};
+export type MotionSample = z.infer<typeof motionSampleSchema>;
 export * from './pendulum';
 export * from './bottle';
+export * from './motion';
 import { pendulumInvestigationSchema } from './pendulum';
 import { bottleInvestigationSchema } from './bottle';
+import { motionInvestigationSchema, motionSampleSchema } from './motion';
 // v1 audio records remain readable without a destructive storage migration.
 export const notebookRecordSchema = z.union([
   investigationSchema,
   pendulumInvestigationSchema,
   bottleInvestigationSchema,
+  motionInvestigationSchema,
 ]);
 export type NotebookRecord = z.infer<typeof notebookRecordSchema>;

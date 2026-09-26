@@ -12,6 +12,7 @@ import {
   Mic,
   MoveUpRight,
   Orbit,
+  Rotate3D,
   ScanLine,
   ShieldCheck,
   Sparkles,
@@ -21,13 +22,14 @@ import type { BottleInvestigation, PendulumInvestigation } from '../../../packag
 import { PendulumLab } from './components/PendulumLab';
 import { SoundLab } from './components/SoundLab';
 import { BottleLab } from './components/BottleLab';
+import { MotionLab } from './components/MotionLab';
 import { Diagnostics } from './components/Diagnostics';
 import { Notebook } from './components/Notebook';
 import { UpdateBanner } from './components/UpdateBanner';
 import { listInvestigations } from './storage/notebook';
 import { confirmLeave } from './platform/leave-guard';
-type Page = 'home' | 'sound' | 'pendulum' | 'bottle' | 'diagnostics' | 'notebook';
-const labs: Page[] = ['sound', 'pendulum', 'bottle'];
+type Page = 'home' | 'sound' | 'pendulum' | 'bottle' | 'motion' | 'diagnostics' | 'notebook';
+const labs: Page[] = ['sound', 'pendulum', 'bottle', 'motion'];
 function initialPage(): Page {
   const p = location.hash.slice(1);
   return [...labs, 'diagnostics', 'notebook'].includes(p as Page) ? (p as Page) : 'home';
@@ -117,9 +119,11 @@ export default function App() {
                     ? 'Звук'
                     : page === 'bottle'
                       ? 'Бутылка'
-                      : page === 'pendulum'
-                        ? 'Маятник'
-                        : 'Исследования'}
+                      : page === 'motion'
+                        ? 'Датчики движения'
+                        : page === 'pendulum'
+                          ? 'Маятник'
+                          : 'Исследования'}
             </b>
           </div>
           <div className="header-right">
@@ -147,6 +151,8 @@ export default function App() {
               onBack={() => go('home')}
               onSaved={refresh}
             />
+          ) : page === 'motion' ? (
+            <MotionLab onBack={() => go('home')} onSaved={refresh} />
           ) : page === 'diagnostics' ? (
             <Diagnostics />
           ) : page === 'notebook' ? (
@@ -294,6 +300,21 @@ export default function App() {
                     <MoveUpRight size={17} />
                   </span>
                 </button>
+                <button className="lab-card available" onClick={() => go('motion')}>
+                  <div className="card-top">
+                    <span className="lab-icon blue">
+                      <Rotate3D size={25} />
+                    </span>
+                    <span className="availability">Доступно</span>
+                  </div>
+                  <span className="card-number">04 / ДВИЖЕНИЕ · ДАТЧИКИ</span>
+                  <h3>Что чувствует телефон?</h3>
+                  <p>Наклоняй и поворачивай телефон: угол, угловая скорость и сила тяжести.</p>
+                  <span className="card-link">
+                    Открыть датчики
+                    <MoveUpRight size={17} />
+                  </span>
+                </button>
                 <article className="lab-card">
                   <div className="card-top">
                     <span className="lab-icon orange">
@@ -301,7 +322,7 @@ export default function App() {
                     </span>
                     <span className="availability pending">Следующий этап</span>
                   </div>
-                  <span className="card-number">04 / ВИДЕО</span>
+                  <span className="card-number">05 / ВИДЕО</span>
                   <h3>Поймай движение</h3>
                   <p>Преврати видео падения мяча в траекторию и график ускорения.</p>
                   <span className="card-footer">Готовится · разметка и трекинг</span>

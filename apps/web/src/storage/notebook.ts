@@ -128,6 +128,23 @@ function csv(item: NotebookRecord) {
           ].join(','),
         ),
       ];
+    case 'motion-01':
+      return [
+        '# provenance=' + item.provenance,
+        '# empty cell = value not reported by the sensor; rotation in deg/s about device axes',
+        't_s,ax_m_s2,ay_m_s2,az_m_s2,wx_deg_s,wy_deg_s,wz_deg_s',
+        ...item.samples.map((s) =>
+          [
+            s.t,
+            s.accelerationWithGravity?.x ?? '',
+            s.accelerationWithGravity?.y ?? '',
+            s.accelerationWithGravity?.z ?? '',
+            s.rotationRate?.beta ?? '',
+            s.rotationRate?.gamma ?? '',
+            s.rotationRate?.alpha ?? '',
+          ].join(','),
+        ),
+      ];
     default:
       return [
         '# provenance=' + item.provenance,

@@ -16,14 +16,17 @@ import {
 import { Spectrum } from './Spectrum';
 import { PendulumResults } from './PendulumResults';
 import { BottleResults } from './BottleResults';
+import { MotionReview } from './MotionReview';
 export const scenarioTitles: Record<NotebookRecord['scenarioId'], string> = {
   'sound-01': 'Увидь свой голос',
   'pendulum-01': 'Открой закон маятника',
   'bottle-01': 'Собери музыкальный инструмент',
+  'motion-01': 'Что чувствует телефон?',
 };
 function sourceLabel(item: NotebookRecord) {
   if (item.provenance === 'simulation') return 'СИМУЛЯЦИЯ';
   if (item.scenarioId === 'pendulum-01') return 'РУЧНЫЕ ИЗМЕРЕНИЯ';
+  if (item.scenarioId === 'motion-01') return 'ДАТЧИКИ';
   return item.provenance === 'manual' ? 'РУЧНОЙ ВВОД' : 'МИКРОФОН';
 }
 export function Notebook({
@@ -107,6 +110,38 @@ export function Notebook({
       setError('Не удалось удалить запись. Попробуй ещё раз.');
     }
   }
+  if (selected?.scenarioId === 'motion-01')
+    return (
+      <>
+        <button className="back" onClick={() => setSelected(null)}>
+          <ArrowLeft size={16} />
+          Дневник
+        </button>
+        <div className="eyebrow">СОХРАНЁННАЯ ЗАПИСЬ · {sourceLabel(selected)}</div>
+        <h1>{scenarioTitles[selected.scenarioId]}</h1>
+        <p className="intro">{new Date(selected.createdAt).toLocaleString('ru-RU')}</p>
+        <div className="white-card">
+          <h2>Гипотеза</h2>
+          <p>{selected.hypothesis}</p>
+          <h2>Твой вывод</h2>
+          <p>{selected.conclusion || 'Вывод ещё не записан.'}</p>
+          <div className="result-actions">
+            <button className="secondary" onClick={() => download(selected, 'json')}>
+              <Download size={16} />
+              JSON
+            </button>
+            <button className="secondary" onClick={() => download(selected, 'csv')}>
+              CSV
+            </button>
+          </div>
+        </div>
+        <MotionReview
+          samples={selected.samples}
+          analysis={selected.analysis}
+          simulated={selected.provenance === 'simulation'}
+        />
+      </>
+    );
   if (selected && selected.scenarioId !== 'sound-01')
     return (
       <>
@@ -305,7 +340,9 @@ export function Notebook({
                 <span>
                   {item.scenarioId === 'sound-01'
                     ? `${item.analysis.peakHz?.toFixed(0) ?? '—'} Гц · ${item.analysis.duration.toFixed(1)} с`
-                    : `${item.trials.length} попыток · версия ${item.revision}`}
+                    : item.scenarioId === 'motion-01'
+                      ? `${item.analysis.durationS.toFixed(1)} с · ${item.analysis.movements.length} движений`
+                      : `${item.trials.length} попыток · версия ${item.revision}`}
                 </span>
               </div>
               <div className="result-actions">
