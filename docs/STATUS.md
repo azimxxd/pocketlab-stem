@@ -18,7 +18,7 @@
 E0: desktop browser capability work started; real iPhone/Android tests and video codec/timebase spike are outstanding. No phone hardware has been tested by the agent.
 E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
-E3: manual pendulum and model discovery implemented; S2 and M2, gyro/video pendulum modes, broader device validation remain open.
+E3: manual pendulum, S2 bottle resonance series, shared model-discovery engine and JSON import implemented; M2, gyro/video pendulum modes and real-apparatus validation remain open.
 E4–E7: not implemented.
 
 ## Added in the mobile-readiness iteration
@@ -34,13 +34,22 @@ E4–E7: not implemented.
 - Spectrogram draws only appended frames with a precomputed palette instead of repainting every cell at 20 Hz.
 - `@playwright/test` and `@vitejs/plugin-react` pinned instead of `latest`.
 
+## Added in the S2 / import iteration
+
+- Shared discovery engine (`packages/physics/discovery.ts`): constant, linear, √x and 1/√x models, leave-one-condition-out validation, condition count/range/margin rules per scenario. Pendulum now uses it with unchanged results (`pendulum-v1`).
+- Generic UI for series: `ModelDiscovery` (plot, model toggles, scores, residuals) and `TrialAudit` (table, reasoned exclusion, restore, history). Pendulum refactored onto them.
+- S2 «Собери музыкальный инструмент»: hypothesis before measurement; bottle capacity fixed per series; air volume = capacity − water (SI m³ internally, ml in UI). Tone source per series: microphone (5 s capture) or entered frequency (e.g. tuner), plus a labelled Helmholtz simulation series. Sources never mix.
+- Microphone tone: sub-bin parabolic peak interpolation (opt-in; S1 keeps bin centres), plateau = frames within ±3% of the median, spread = half IQR. Refuses a value for short, noisy, gliding or interrupted captures; flags clipping and tones >4 kHz. Only per-frame peak frequencies are stored, never audio.
+- Models f = c, f = aV + b, f = a/√V compared on the f scale; f² = k/V + b shown separately as «f²·V = const» check. Scenario `bottle-01`, schema v2, algorithm `bottle-v1` / `steady-tone-v1`.
+- Notebook: bottle records listed, opened, resumed, exported as CSV (SI units) and JSON. JSON import (single record or array, ≤5 MB): schema validation, invalid rows counted and skipped, identical records not duplicated, conflicting IDs imported as a copy instead of overwriting.
+
 ## Next bounded implementation tasks
 
 1. Provision a trusted HTTPS dev URL and complete iPhone/Android permission, cadence and lifecycle matrix; use actual phones.
 2. Extend the scenario-specific v2 Investigation/Trial/Analysis pattern to audio and future scenarios; preserve existing v1 audio records.
 3. Move reproducible audio analysis to AudioWorklet + Worker; validated STFT normalization and richer quality metrics.
-4. Validate the manual pendulum with real apparatus; add S2 bottle resonance and M2 sensor visualization. Then implement sensor/video-based pendulum timing.
-5. Offline shell caching is done; add JSON import with export/import round-trip.
+4. Validate the manual pendulum and S2 bottle with real apparatus and phones (tone plateau thresholds are engineering guesses); add M2 sensor visualization. Then implement sensor/video-based pendulum timing.
+5. Offline shell and JSON import are done; add PDF report and global storage quota handling.
 7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
 6. Perform video PTS/codec spike, then calibrated manual annotation. Backend/classroom/AI follow stable evidence contracts.
 

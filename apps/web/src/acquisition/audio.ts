@@ -14,6 +14,8 @@ export async function startAudio(
   onEnded: () => void,
   onClip: () => void,
   signal: AbortSignal,
+  /** Sub-bin peak refinement for sustained tones (S2); S1 keeps bin centres. */
+  options: { interpolatePeak?: boolean } = {},
 ): Promise<AudioSession> {
   const context = new AudioContext();
   let stream: MediaStream | undefined;
@@ -101,7 +103,12 @@ export async function startAudio(
       }
       analyser.getFloatFrequencyData(frequency);
       analyser.getFloatTimeDomainData(wave);
-      const peak = dominantPeak(frequency, context.sampleRate, analyser.fftSize);
+      const peak = dominantPeak(
+        frequency,
+        context.sampleRate,
+        analyser.fftSize,
+        options.interpolatePeak,
+      );
       if (wave.some((n) => Math.abs(n) >= 0.999)) clippingFrames++;
       if (clippingFrames === 3) {
         onClip();

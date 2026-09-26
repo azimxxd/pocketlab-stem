@@ -51,3 +51,12 @@ Final regression after this iteration: `npm run build` passed, `npm test` passed
 - `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: 13 passed. New: leave prompt on unsaved series (decline keeps data, accept leaves); saved series exports revision 1 with one analysis on repeated clicks; injected invalid IndexedDB row is reported and downloadable as-is.
 - Production preview in desktop Chrome: service worker activated with scope `/`, manifest and all three icons served (200, image/png). After stopping the preview server, reloading `#pendulum` rendered from the service-worker cache. Offline notice appeared once after install and not on later loads.
 - Not established: PWA installation and standalone mode on iPhone/Android, Wake Lock and Web Share behavior on phones, whether Safari grants persistent storage. Still requires a trusted HTTPS endpoint.
+
+## S2 bottle and import iteration
+
+- `npm test`: 43 passed. New: Blackman-windowed synthetic sines at 123.4/187.9/440 Hz and Fs 44.1/48 kHz — interpolated peak within 0.1 bin, bin-centre peak within 0.5 bin; steady-tone plateau ignores onset/noise, refuses noise-only, too-short, gliding and interrupted captures; bottle comparison selects f = a/√V on Helmholtz data and linear on linear data; insufficient/narrow-range states; grouped hold-out; mixed-source and tone/provenance rejection; schema references.
+- `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: 18 passed. New: manual bottle series → inverse-root model → save → notebook → resume revision 2 → CSV/JSON; simulation labelled and export provenance at 360 px; water filling the bottle rejected; microphone tone capture through Chrome's fake device auto-stops after 5 s and closes its AudioContext; JSON import rejects malformed/unknown files without changing the notebook, imports, detects duplicates, and exports byte-identical JSON after round-trip.
+- Pendulum refactor onto the shared engine: all previous pendulum unit and browser tests unchanged and passing.
+- Desktop screenshot of the simulated bottle series inspected: f = 3958/√V, f²·V ≈ 15 600 Hz²·l, consistent with the generator (≈102 Hz at 1.5 l).
+- CI: first remote run failed only on the motion diagnostics test because headless Linux Chromium lacks `DeviceMotionEvent`; the test now supplies a constructor only when absent (events were already synthetic). CI uploads `test-results/` on failure.
+- Not established: a real bottle blown near a real phone microphone; plateau thresholds (±3%, 10 frames, 40% voiced) and interpolation bias on real, noisy tones.

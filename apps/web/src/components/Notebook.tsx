@@ -1,15 +1,31 @@
-import { useEffect, useState } from 'react';
-import { BookOpen, Download, Trash2, ArrowLeft, Play, Pause } from 'lucide-react';
-import type { NotebookRecord, PendulumInvestigation } from '../../../../packages/contracts';
+import { useEffect, useRef, useState } from 'react';
+import { BookOpen, Download, Trash2, ArrowLeft, Play, Pause, Upload } from 'lucide-react';
+import type {
+  BottleInvestigation,
+  NotebookRecord,
+  PendulumInvestigation,
+} from '../../../../packages/contracts';
 import {
   listInvestigations,
   deleteInvestigation,
   download,
   downloadUnreadable,
+  importRecords,
   storagePersisted,
 } from '../storage/notebook';
 import { Spectrum } from './Spectrum';
 import { PendulumResults } from './PendulumResults';
+import { BottleResults } from './BottleResults';
+export const scenarioTitles: Record<NotebookRecord['scenarioId'], string> = {
+  'sound-01': 'Увидь свой голос',
+  'pendulum-01': 'Открой закон маятника',
+  'bottle-01': 'Собери музыкальный инструмент',
+};
+function sourceLabel(item: NotebookRecord) {
+  if (item.provenance === 'simulation') return 'СИМУЛЯЦИЯ';
+  if (item.scenarioId === 'pendulum-01') return 'РУЧНЫЕ ИЗМЕРЕНИЯ';
+  return item.provenance === 'manual' ? 'РУЧНОЙ ВВОД' : 'МИКРОФОН';
+}
 export function Notebook({
   onStart,
   onChange,
@@ -17,7 +33,7 @@ export function Notebook({
 }: {
   onStart: () => void;
   onChange: () => void;
-  onResume: (record: PendulumInvestigation) => void;
+  onResume: (record: PendulumInvestigation | BottleInvestigation) => void;
 }) {
   const [items, setItems] = useState<NotebookRecord[]>([]);
   const [unreadable, setUnreadable] = useState<unknown[]>([]);
@@ -27,6 +43,31 @@ export function Notebook({
   const [selected, setSelected] = useState<NotebookRecord | null>(null);
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [notice, setNotice] = useState('');
+  const fileInput = useRef<HTMLInputElement>(null);
+  async function importFile(file: File) {
+    setError('');
+    setNotice('');
+    try {
+      const result = await importRecords(file);
+      await load();
+      onChange();
+      setNotice(
+        [
+          `Импортировано: ${result.imported}.`,
+          result.duplicates ? `Уже были в дневнике: ${result.duplicates}.` : '',
+          result.copies
+            ? `Сохранено копией, потому что в дневнике есть другая версия с тем же ID: ${result.copies}.`
+            : '',
+          result.invalid ? `Не прошли проверку и пропущены: ${result.invalid}.` : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось импортировать файл.');
+    }
+  }
   async function load() {
     try {
       const { records, unreadable } = await listInvestigations();
@@ -66,7 +107,7 @@ export function Notebook({
       setError('Не удалось удалить запись. Попробуй ещё раз.');
     }
   }
-  if (selected?.scenarioId === 'pendulum-01')
+  if (selected && selected.scenarioId !== 'sound-01')
     return (
       <>
         <button className="back" onClick={() => setSelected(null)}>
@@ -74,11 +115,9 @@ export function Notebook({
           Дневник
         </button>
         <div className="eyebrow">
-          СОХРАНЁННАЯ СЕРИЯ ·{' '}
-          {selected.provenance === 'simulation' ? 'СИМУЛЯЦИЯ' : 'РУЧНЫЕ ИЗМЕРЕНИЯ'} · ВЕРСИЯ{' '}
-          {selected.revision}
+          СОХРАНЁННАЯ СЕРИЯ · {sourceLabel(selected)} · ВЕРСИЯ {selected.revision}
         </div>
-        <h1>Открой закон маятника</h1>
+        <h1>{scenarioTitles[selected.scenarioId]}</h1>
         <p className="intro">{new Date(selected.updatedAt).toLocaleString('ru-RU')}</p>
         <div className="white-card">
           <h2>Гипотеза</h2>
@@ -98,7 +137,11 @@ export function Notebook({
             </button>
           </div>
         </div>
-        <PendulumResults trials={selected.trials} events={selected.selectionEvents} />
+        {selected.scenarioId === 'pendulum-01' ? (
+          <PendulumResults trials={selected.trials} events={selected.selectionEvents} />
+        ) : (
+          <BottleResults trials={selected.trials} events={selected.selectionEvents} />
+        )}
         <details className="method-details">
           <summary>Версии анализа ({selected.analyses.length})</summary>
           <ul>
@@ -197,8 +240,31 @@ export function Notebook({
           <h1>Дневник исследователя</h1>
           <p>Гипотезы, измерения и выводы — всё в одном месте.</p>
         </div>
-        <span className="pill">{items.length} записей</span>
+        <div className="result-actions">
+          <span className="pill">{items.length} записей</span>
+          <button className="secondary" onClick={() => fileInput.current?.click()}>
+            <Upload size={16} />
+            Импорт JSON
+          </button>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            aria-label="Файл исследования JSON"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) void importFile(file);
+            }}
+          />
+        </div>
       </div>
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
       {error && (
         <p role="alert" className="error">
           {error}
@@ -232,21 +298,14 @@ export function Notebook({
             <article className="white-card notebook-item" key={item.id}>
               <div>
                 <span className="eyebrow">
-                  {item.provenance === 'simulation'
-                    ? 'СИМУЛЯЦИЯ'
-                    : item.scenarioId === 'pendulum-01'
-                      ? 'РУЧНОЕ ИЗМЕРЕНИЕ'
-                      : 'МИКРОФОН'}{' '}
-                  · {new Date(item.createdAt).toLocaleDateString('ru-RU')}
+                  {sourceLabel(item)} · {new Date(item.createdAt).toLocaleDateString('ru-RU')}
                 </span>
-                <h2>
-                  {item.scenarioId === 'pendulum-01' ? 'Открой закон маятника' : 'Увидь свой голос'}
-                </h2>
+                <h2>{scenarioTitles[item.scenarioId]}</h2>
                 <p>{item.hypothesis}</p>
                 <span>
-                  {item.scenarioId === 'pendulum-01'
-                    ? `${item.trials.length} попыток · версия ${item.revision}`
-                    : `${item.analysis.peakHz?.toFixed(0) ?? '—'} Гц · ${item.analysis.duration.toFixed(1)} с`}
+                  {item.scenarioId === 'sound-01'
+                    ? `${item.analysis.peakHz?.toFixed(0) ?? '—'} Гц · ${item.analysis.duration.toFixed(1)} с`
+                    : `${item.trials.length} попыток · версия ${item.revision}`}
                 </span>
               </div>
               <div className="result-actions">

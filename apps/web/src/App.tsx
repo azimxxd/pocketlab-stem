@@ -15,19 +15,22 @@ import {
   ScanLine,
   ShieldCheck,
   Sparkles,
+  Wind,
 } from 'lucide-react';
-import type { PendulumInvestigation } from '../../../packages/contracts';
+import type { BottleInvestigation, PendulumInvestigation } from '../../../packages/contracts';
 import { PendulumLab } from './components/PendulumLab';
 import { SoundLab } from './components/SoundLab';
+import { BottleLab } from './components/BottleLab';
 import { Diagnostics } from './components/Diagnostics';
 import { Notebook } from './components/Notebook';
 import { UpdateBanner } from './components/UpdateBanner';
 import { listInvestigations } from './storage/notebook';
 import { confirmLeave } from './platform/leave-guard';
-type Page = 'home' | 'sound' | 'pendulum' | 'diagnostics' | 'notebook';
+type Page = 'home' | 'sound' | 'pendulum' | 'bottle' | 'diagnostics' | 'notebook';
+const labs: Page[] = ['sound', 'pendulum', 'bottle'];
 function initialPage(): Page {
   const p = location.hash.slice(1);
-  return ['sound', 'pendulum', 'diagnostics', 'notebook'].includes(p) ? (p as Page) : 'home';
+  return [...labs, 'diagnostics', 'notebook'].includes(p as Page) ? (p as Page) : 'home';
 }
 export default function App() {
   const [page, setPage] = useState<Page>(initialPage);
@@ -35,6 +38,7 @@ export default function App() {
   pageRef.current = page;
   const [count, setCount] = useState(0);
   const [pendulum, setPendulum] = useState<PendulumInvestigation | undefined>(undefined);
+  const [bottle, setBottle] = useState<BottleInvestigation | undefined>(undefined);
   const refresh = () => {
     void listInvestigations()
       .then(({ records }) => setCount(records.length))
@@ -80,7 +84,7 @@ export default function App() {
             { id: 'diagnostics' as Page, label: 'Датчики', icon: Activity },
           ].map(({ id, label, icon: Icon }) => (
             <button
-              className={`nav-item ${page === id || (['sound', 'pendulum'].includes(page) && id === 'home') ? 'active' : ''}`}
+              className={`nav-item ${page === id || (labs.includes(page) && id === 'home') ? 'active' : ''}`}
               key={id}
               onClick={() => go(id)}
             >
@@ -111,9 +115,11 @@ export default function App() {
                   ? 'Датчики'
                   : page === 'sound'
                     ? 'Звук'
-                    : page === 'pendulum'
-                      ? 'Маятник'
-                      : 'Исследования'}
+                    : page === 'bottle'
+                      ? 'Бутылка'
+                      : page === 'pendulum'
+                        ? 'Маятник'
+                        : 'Исследования'}
             </b>
           </div>
           <div className="header-right">
@@ -134,6 +140,13 @@ export default function App() {
               onBack={() => go('home')}
               onSaved={refresh}
             />
+          ) : page === 'bottle' ? (
+            <BottleLab
+              key={bottle?.id ?? 'new'}
+              initial={bottle}
+              onBack={() => go('home')}
+              onSaved={refresh}
+            />
           ) : page === 'diagnostics' ? (
             <Diagnostics />
           ) : page === 'notebook' ? (
@@ -141,7 +154,9 @@ export default function App() {
               onStart={() => go('sound')}
               onChange={refresh}
               onResume={(record) => {
-                if (go('pendulum')) setPendulum(record);
+                if (record.scenarioId === 'bottle-01') {
+                  if (go('bottle')) setBottle(record);
+                } else if (go('pendulum')) setPendulum(record);
               }}
             />
           ) : (
@@ -220,7 +235,7 @@ export default function App() {
                 </div>
               </section>
               <div className="section-heading">
-                <h2>Три способа увидеть физику</h2>
+                <h2>Исследования</h2>
                 <span>Выбери свой инструмент</span>
               </div>
               <div className="lab-cards">
@@ -259,6 +274,26 @@ export default function App() {
                     <MoveUpRight size={17} />
                   </span>
                 </button>
+                <button
+                  className="lab-card available"
+                  onClick={() => {
+                    if (go('bottle')) setBottle(undefined);
+                  }}
+                >
+                  <div className="card-top">
+                    <span className="lab-icon teal">
+                      <Wind size={25} />
+                    </span>
+                    <span className="availability">Доступно</span>
+                  </div>
+                  <span className="card-number">03 / ЗВУК · СЕРИЯ</span>
+                  <h3>Собери музыкальный инструмент</h3>
+                  <p>Налей воды в бутылку, подуй и найди, как тон зависит от объёма воздуха.</p>
+                  <span className="card-link">
+                    Исследовать бутылку
+                    <MoveUpRight size={17} />
+                  </span>
+                </button>
                 <article className="lab-card">
                   <div className="card-top">
                     <span className="lab-icon orange">
@@ -266,7 +301,7 @@ export default function App() {
                     </span>
                     <span className="availability pending">Следующий этап</span>
                   </div>
-                  <span className="card-number">03 / ВИДЕО</span>
+                  <span className="card-number">04 / ВИДЕО</span>
                   <h3>Поймай движение</h3>
                   <p>Преврати видео падения мяча в траекторию и график ускорения.</p>
                   <span className="card-footer">Готовится · разметка и трекинг</span>

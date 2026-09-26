@@ -48,7 +48,13 @@ export type MotionSample = {
   rotationRate: { alpha: number; beta: number; gamma: number } | null;
 };
 export * from './pendulum';
+export * from './bottle';
 import { pendulumInvestigationSchema } from './pendulum';
+import { bottleInvestigationSchema } from './bottle';
 // v1 audio records remain readable without a destructive storage migration.
-export const notebookRecordSchema = z.union([investigationSchema, pendulumInvestigationSchema]);
+export const notebookRecordSchema = z.union([
+  investigationSchema,
+  pendulumInvestigationSchema,
+  bottleInvestigationSchema,
+]);
 export type NotebookRecord = z.infer<typeof notebookRecordSchema>;

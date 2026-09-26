@@ -32,9 +32,9 @@ Browser microphone access requires permission. The synthetic demo is silent: it 
 
 - `apps/web`: React/Vite UI, microphone/motion adapters, device-local storage.
 - `packages/contracts`: runtime-validated research record schema.
-- `packages/physics`: spectrum/RMS/quality calculations independent of React.
+- `packages/physics`: spectrum/RMS/tone/quality calculations and the shared model-discovery engine, independent of React.
 - `tests`: physics and browser workflow tests.
 - `docs/PLAN_SMARTPHONE_LAB.md`: complete v2 product plan.
 - `docs/STATUS.md`: completed work, limitations and next steps.
 
-This is the first implementation, not the complete planned platform. Manual pendulum now includes timing, series, error bounds, model comparison, exclusion history and saved analysis revisions. Gyro/video timing, video lab, AI, classroom, Kazakh content, JSON import and server synchronization remain future stages. No active UI controls claim these features are working.
+This is the first implementation, not the complete planned platform. Manual pendulum and the S2 bottle-resonance series include measurement series, error bounds, model comparison, exclusion history and saved analysis revisions; the notebook imports and exports JSON. Gyro/video timing, video lab, AI, classroom, Kazakh content, JSON import and server synchronization remain future stages. No active UI controls claim these features are working.

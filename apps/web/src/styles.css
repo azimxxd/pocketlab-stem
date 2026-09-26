@@ -374,7 +374,7 @@ main {
 }
 .lab-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 235px), 1fr));
   gap: 18px;
 }
 .lab-card {
@@ -412,6 +412,10 @@ main {
 .blue {
   background: #eaf0fb;
   color: #5b76a7;
+}
+.teal {
+  background: #e3f3f1;
+  color: #2f7169;
 }
 .orange {
   background: #fff0e6;
@@ -1095,6 +1099,15 @@ textarea {
 }
 .update-banner > svg {
   flex-shrink: 0;
+}
+.notice {
+  padding: 13px 15px;
+  background: #eef6e4;
+  border: 1px solid #d6e6c3;
+  color: #2f5132;
+  border-radius: 7px;
+  margin-top: 15px;
+  font-size: 13px;
 }
 @media (min-width: 1500px) {
   main {

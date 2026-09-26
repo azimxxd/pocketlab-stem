@@ -14,11 +14,16 @@ export function rmsDb(samples: Float32Array): number | null {
   }
   return sum === 0 ? null : 20 * Math.log10(Math.sqrt(sum / samples.length));
 }
-/** Dominant spectral component, not a voice fundamental estimator. */
+/**
+ * Dominant spectral component, not a voice fundamental estimator. With `interpolate`, a parabola
+ * through the dB values of the peak bin and its neighbours refines the frequency below the bin
+ * step fs/N; without it the bin centre is reported (S1 behaviour, sound-v0.1).
+ */
 export function dominantPeak(
   bins: Float32Array,
   fs: number,
   fftSize: number,
+  interpolate = false,
 ): { hz: number | null; prominence: number | null } {
   if (fs <= 0 || fftSize <= 0) return { hz: null, prominence: null };
   const start = Math.max(1, Math.ceil((70 * fftSize) / fs)),
@@ -39,7 +44,14 @@ export function dominantPeak(
   const background = median(floor);
   if (index < 0 || background === null) return { hz: null, prominence: null };
   const prominence = peak - background;
-  return { hz: peak > -70 && prominence >= 12 ? (index * fs) / fftSize : null, prominence };
+  if (!(peak > -70 && prominence >= 12)) return { hz: null, prominence };
+  let offset = 0;
+  const [left, right] = [bins[index - 1], bins[index + 1]];
+  if (interpolate && Number.isFinite(left) && Number.isFinite(right)) {
+    const curvature = left - 2 * peak + right;
+    if (curvature < 0) offset = Math.max(-0.5, Math.min(0.5, (0.5 * (left - right)) / curvature));
+  }
+  return { hz: ((index + offset) * fs) / fftSize, prominence };
 }
 /** Preserve maximum per display bucket. These are display values, not averaged power. */
 export function displayBins(bins: Float32Array, count = 128, end = bins.length): number[] {
@@ -77,5 +89,50 @@ export function analyzeSound(
     averageDb: power > 0 ? 10 * Math.log10(power) : null,
     duration,
     quality: { status: invalid ? 'invalid' : reasons.length ? 'warning' : 'valid', reasons },
+  };
+}
+
+export type ToneIssue = 'TOO_FEW_SAMPLES' | 'WEAK_PERIODICITY' | 'UNSTABLE_TONE' | 'INTERRUPTED';
+export type SteadyTone = {
+  algorithmVersion: 'steady-tone-v1';
+  frequencyHz: number | null;
+  spreadHz: number | null;
+  voicedFrames: number;
+  stableFrames: number;
+  totalFrames: number;
+  issues: ToneIssue[];
+};
+/**
+ * Frequency of a sustained tone (e.g. blowing across a bottle). Frames within ±3% of the median
+ * peak form the plateau; onset, breath noise and jumps to other components fall outside it.
+ * Spread is half the interquartile range of plateau frames — variability, not accuracy.
+ */
+export function steadyTone(
+  peaks: { t: number; hz: number | null }[],
+  interrupted = false,
+): SteadyTone {
+  const voiced = peaks
+    .map((p) => p.hz)
+    .filter((n): n is number => n !== null && Number.isFinite(n));
+  const center = median(voiced);
+  const stable =
+    center === null ? [] : voiced.filter((hz) => Math.abs(hz - center) <= center * 0.03);
+  const issues: ToneIssue[] = [];
+  if (interrupted) issues.push('INTERRUPTED');
+  if (stable.length < 10) issues.push('TOO_FEW_SAMPLES');
+  if (voiced.length < peaks.length * 0.4) issues.push('WEAK_PERIODICITY');
+  if (voiced.length && stable.length < voiced.length * 0.6) issues.push('UNSTABLE_TONE');
+  const sorted = [...stable].sort((a, b) => a - b);
+  const quartile = (q: number) =>
+    sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
+  const valid = issues.length === 0;
+  return {
+    algorithmVersion: 'steady-tone-v1',
+    frequencyHz: valid ? median(stable) : null,
+    spreadHz: valid ? (quartile(0.75) - quartile(0.25)) / 2 : null,
+    voicedFrames: voiced.length,
+    stableFrames: stable.length,
+    totalFrames: peaks.length,
+    issues,
   };
 }
