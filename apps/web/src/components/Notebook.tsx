@@ -12,7 +12,11 @@ import {
   downloadUnreadable,
   importRecords,
   storagePersisted,
+  prepareNotebookBackup,
+  downloadNotebookBackup,
+  type NotebookBackup,
 } from '../storage/notebook';
+import { ReportTools } from './ReportTools';
 import { Spectrum } from './Spectrum';
 import { PendulumResults } from './PendulumResults';
 import { BottleResults } from './BottleResults';
@@ -51,10 +55,25 @@ export function Notebook({
   const [cursor, setCursor] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [notice, setNotice] = useState('');
+  const [backup, setBackup] = useState<NotebookBackup | null>(null);
+  const [preparingBackup, setPreparingBackup] = useState(false);
+  async function prepareBackup() {
+    setError('');
+    setBackup(null);
+    setPreparingBackup(true);
+    try {
+      setBackup(await prepareNotebookBackup());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не удалось подготовить копию.');
+    } finally {
+      setPreparingBackup(false);
+    }
+  }
   const fileInput = useRef<HTMLInputElement>(null);
   async function importFile(file: File) {
     setError('');
     setNotice('');
+    setBackup(null);
     try {
       const result = await importRecords(file);
       await load();
@@ -108,6 +127,7 @@ export function Notebook({
     if (!window.confirm('Удалить это исследование из дневника?')) return;
     try {
       await deleteInvestigation(item.id);
+      setBackup(null);
       await load();
       onChange();
     } catch {
@@ -117,6 +137,7 @@ export function Notebook({
   if (selected?.scenarioId === 'video-01')
     return (
       <>
+        <ReportTools record={selected} />
         <button className="back" onClick={() => setSelected(null)}>
           <ArrowLeft size={16} />
           Дневник
@@ -166,6 +187,7 @@ export function Notebook({
   if (selected?.scenarioId === 'motion-01')
     return (
       <>
+        <ReportTools record={selected} />
         <button className="back" onClick={() => setSelected(null)}>
           <ArrowLeft size={16} />
           Дневник
@@ -198,6 +220,7 @@ export function Notebook({
   if (selected && selected.scenarioId !== 'sound-01')
     return (
       <>
+        <ReportTools record={selected} />
         <button className="back" onClick={() => setSelected(null)}>
           <ArrowLeft size={16} />
           Дневник
@@ -247,6 +270,7 @@ export function Notebook({
   if (selected)
     return (
       <>
+        <ReportTools record={selected} />
         <button
           className="back"
           onClick={() => {
@@ -299,6 +323,20 @@ export function Notebook({
           <p>{selected.hypothesis}</p>
           <h2>Твой вывод</h2>
           <p>{selected.conclusion || 'Вывод ещё не записан.'}</p>
+          <p>
+            Длительность: {fmt(selected.analysis.duration, 2)} с · Доминирующая частота:{' '}
+            {selected.analysis.peakHz == null
+              ? 'не определена'
+              : `${fmt(selected.analysis.peakHz, 1)} Гц`}
+            {' · '}Средний уровень:{' '}
+            {selected.analysis.averageDb == null
+              ? 'не определён'
+              : `${fmt(selected.analysis.averageDb, 1)} дБFS`}
+          </p>
+          <p className="subtle">
+            Алгоритм: {selected.analysis.algorithmVersion} · FFT: {selected.fftSize} · Частота
+            дискретизации: {selected.sampleRate} Гц.
+          </p>
           <p className="subtle">
             Воспроизводится спектральная визуализация. Аудио не сохранялось. Качество записи:{' '}
             {selected.analysis.quality.status === 'valid'
@@ -348,6 +386,36 @@ export function Notebook({
           />
         </div>
       </div>
+      <section className="white-card" aria-label="Резервная копия дневника">
+        <h2>Сохрани свои открытия</h2>
+        <p>
+          Все записи дневника — одним JSON-файлом. Для восстановления открой «Импорт JSON» в этом
+          или другом браузере. Совпадающие записи не дублируются, изменённые сохраняются копиями.
+        </p>
+        <button
+          className="secondary"
+          disabled={preparingBackup || loading}
+          onClick={() => void prepareBackup()}
+        >
+          {preparingBackup ? 'Готовим копию…' : 'Подготовить резервную копию'}
+        </button>
+        {backup && (
+          <div className="result-actions">
+            <p role="status">
+              Снимок на {new Date(backup.createdAt).toLocaleString('ru-RU')}: {backup.count} записей
+              · {(backup.bytes / 1024).toFixed(1)} КБ. Новые изменения в него не попадут.
+            </p>
+            <button className="secondary" onClick={() => downloadNotebookBackup(backup)}>
+              <Download size={16} /> Скачать резервную копию
+            </button>
+          </div>
+        )}
+        <p className="subtle">
+          Копия содержит гипотезы, выводы и измерения, включая нечитаемые записи для их сохранности.
+          При импорте нечитаемые записи пропускаются с предупреждением. Аудио, видео и доступ к
+          классным комнатам в копию не входят. Лимит файла — 50 МБ.
+        </p>
+      </section>
       {notice && (
         <p className="notice" role="status">
           {notice}

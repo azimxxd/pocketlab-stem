@@ -48,6 +48,29 @@ async function dispatch(request: Request, deps: RouterDeps): Promise<Response> {
   const url = new URL(request.url);
   const length = Number(request.headers.get('content-length') ?? 0);
   if (length > MAX_BODY) return problem(413, 'TOO_LARGE', 'Слишком большой запрос.');
+  // Content-Length is optional and untrusted: also bound the actual streamed body.
+  if (request.method === 'POST' && request.body) {
+    const reader = request.body.getReader();
+    const decoder = new TextDecoder();
+    let bytes = 0;
+    let body = '';
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > MAX_BODY) {
+          void reader.cancel().catch(() => {});
+          return problem(413, 'TOO_LARGE', 'Слишком большой запрос.');
+        }
+        body += decoder.decode(value, { stream: true });
+      }
+      body += decoder.decode();
+    } finally {
+      reader.releaseLock();
+    }
+    request = new Request(request, { body });
+  }
   const client = request.headers.get('cf-connecting-ip') ?? 'local';
   const parts = url.pathname.split('/').filter(Boolean);
   if (request.method === 'GET' && url.pathname === '/health') return new Response('ok');

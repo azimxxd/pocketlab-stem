@@ -70,12 +70,12 @@ export class RoomServer {
     return run;
   }
   private async persist(room: RoomData) {
-    await this.storage.save(room);
     const now = this.clock();
     const activeUntil = room.createdAt + CLASS_LIMITS.activeMs;
     await this.storage.schedule(
       now < activeUntil ? activeUntil : room.createdAt + CLASS_LIMITS.retentionMs,
     );
+    await this.storage.save(room);
     this.broadcast();
   }
   private broadcast() {
@@ -117,19 +117,28 @@ export class RoomServer {
     });
   }
   private async destroy(reason: string) {
+    await this.storage.destroy();
     for (const s of this.streams) {
       s.send(`event: deleted\ndata: ${JSON.stringify({ reason })}\n\n`);
       s.close();
     }
     this.streams.clear();
     this.room = null;
-    await this.storage.destroy();
   }
   async fetch(request: Request): Promise<Response> {
     const path = new URL(request.url).pathname;
     try {
-      if (request.method === 'GET' && path.endsWith('/events')) return await this.events(request);
-      return await this.serial(() => this.handle(request, path));
+      return await this.serial(async () => {
+        try {
+          if (request.method === 'GET' && path.endsWith('/events'))
+            return await this.events(request);
+          return await this.handle(request, path);
+        } catch (error) {
+          // Operations mutate the cached room. After a failed write, disk is authoritative.
+          this.room = undefined;
+          throw error;
+        }
+      });
     } catch (e) {
       if (e instanceof RoomError) return problem(e.status, e.code, e.message);
       if (e instanceof ZodError)
@@ -210,6 +219,10 @@ export class RoomServer {
             if (!open) return;
             open = false;
             this.streams.delete(stream);
+            if (!this.streams.size && this.heartbeat) {
+              clearInterval(this.heartbeat);
+              this.heartbeat = null;
+            }
             try {
               controller.close();
             } catch {}

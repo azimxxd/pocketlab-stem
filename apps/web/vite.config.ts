@@ -1,9 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
-import hosting from '../../vercel.json';
+import hosting from '../../vercel.json' with { type: 'json' };
 // `npm run preview` serves the same site-wide headers as production, so CSP and permission
 // problems show up locally before a deploy.
+const classApiProxy = {
+  '/api/class': {
+    target: 'http://127.0.0.1:8787',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api\/class/, ''),
+  },
+};
 const siteHeaders = Object.fromEntries(
   hosting.headers.find((rule) => rule.source === '/(.*)')!.headers.map((h) => [h.key, h.value]),
 );
@@ -46,7 +53,7 @@ export default defineConfig({
       },
     }),
   ],
-  server: { host: '127.0.0.1', port: 5173, strictPort: true },
-  preview: { headers: siteHeaders },
+  server: { host: '127.0.0.1', port: 5173, strictPort: true, proxy: classApiProxy },
+  preview: { headers: siteHeaders, proxy: classApiProxy },
   build: { outDir: '../../dist', emptyOutDir: true },
 });

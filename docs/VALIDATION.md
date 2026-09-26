@@ -88,3 +88,40 @@ Final regression after this iteration: `npm run build` passed, `npm test` passed
 - Vercel production deploy (`pocketlab-stem.vercel.app`): HTTPS 200; CSP, Permissions-Policy, nosniff, no-referrer, COOP present; Vercel adds HSTS. Hashed assets `max-age=31536000, immutable`; sw.js `no-cache`, index `must-revalidate`. Manifest, icons, favicon, tracker worker served with correct types. Entry bundle hash identical to the local build.
 - Live smoke test in desktop Chrome: secure context, DeviceMotionEvent and getUserMedia available, M2 synthetic recording analysed, service worker installing with precache, no CSP violations.
 - Not established: anything on a phone (see docs/DEVICE_TESTS.md).
+
+
+## Current project review — 2026-09-26
+
+- `npm run build`: passed after routing classroom production requests through same-origin `/api/class/*`; app CSP remains `connect-src 'self'`.
+- `npm test`: 99 passed across 9 files.
+- `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: 36 passed, including classroom teacher/student submission flows.
+- Production preview smoke (`npm run preview`, desktop Chrome at `http://localhost:4173/#class`): classroom room creation and API health check succeeded through the local preview proxy, with no console errors or CSP violations.
+- Vite config uses Node JSON import attributes to avoid the config-loader deprecation warning.
+
+Live status checked without deploying: `GET https://pocketlab-stem.vercel.app/api/class/health` returned Vercel 404 because production is still on `c427ccb`; the classroom code and rewrite are only in local commit `8059f81` and uncommitted working-tree changes. GitHub currently has only Vercel deploy credentials and no Cloudflare Worker deploy credentials/job. The Worker endpoint could not be resolved from this environment, so its live status is unknown. Physical iPhone and Android tests remain outstanding. No deployment was performed as part of this review.
+
+
+## Printable report iteration
+
+- Final checks passed: production build, 99 unit tests, 37 browser tests.
+
+- Browser regression covers saved pendulum simulation → print request → expanded method/version details → visible simulation provenance and conclusion → hidden navigation → restored screen view. Reload retains revision 1.
+- Print-media screenshot of the pendulum report inspected: hypothesis, model plot, residuals, g formula, measurement table and analysis version are readable. This is a print-layout screenshot, not verification of physical printing or PDF pagination.
+- Native PDF destination on iPhone/Android, long reports and printing all other lab scenarios still require validation.
+
+## A5 backup / atomic restore iteration
+
+- Production build passed; 99 unit tests and 40 browser tests passed on desktop Chrome.
+- New browser tests: whole-notebook JSON snapshot → fresh browser restore → exact record equality; repeat restore skips identical records; changed conclusion with same ID is kept as a new copy without overwriting the original.
+- Injected `QuotaExceededError` on the second IndexedDB write: first new write was rolled back, the pre-existing record remained byte-equivalent in JSON, and retry restored both records successfully. This is fault injection, not a physical disk-full experiment.
+- Unreadable raw row inserted directly into IndexedDB appears in the backup even without reloading the list. Restore retains the valid record and reports the skipped invalid row. Notebook with prepared backup fits a 360 px viewport.
+- Not established: mobile system share, real storage exhaustion, performance at the 50 MiB import limit, or cross-tab conflict handling for ordinary investigation saves.
+
+## E5 reliability and deployment iteration
+
+- TypeScript/web production build passed. Full suite: 111 unit/API tests and 40 browser tests passed. Existing 30-student shared-screen latency assertion (local p95 < 2 seconds), role isolation, reconnect, retry/idempotency and revocation checks remain passing.
+- Added 30 simultaneous student SSE readers, each receiving all 30 submissions with the same final revision and correct personal identity, without teacher-only participant details.
+- Fault-injected save and alarm-scheduling failures: no uncommitted participant or revision visible, retry succeeds. Failed deletion preserves the existing room; retry deletes it. Chunked body exceeding 16 KiB without Content-Length is rejected with 413 before room dispatch and the stream is cancelled.
+- Proxy configuration tests reject missing/account-less, HTTP, credential-bearing and path/query-bearing URLs, preserve headers, and replace an existing rewrite without duplication.
+- Wrangler deploy dry-run succeeded with Durable Object and separate create/join limiter bindings; nothing uploaded. Workflow YAML parsed and deployment order verified locally. GitHub execution with Cloudflare credentials is not yet verified.
+- Local Wrangler OAuth authentication succeeds. Read-only account subdomain lookup returned Cloudflare error 10007: workers.dev subdomain not initialized. No account setting, GitHub secret or production deployment was changed during this iteration. Native Worker persistence, remote SSE proxy behavior, live rate limits and real school-network load remain open.

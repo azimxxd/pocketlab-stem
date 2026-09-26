@@ -3,7 +3,7 @@
 ## Implemented
 
 - Local repository structure, npm lockfile, TypeScript, React/Vite, shared schemas, pure physics package.
-- Home/catalogue with available sound and manual pendulum labs; video is explicitly marked as a future stage.
+- Home/catalogue with five available labs: sound, manual pendulum, bottle resonance, phone motion sensors, and video motion analysis.
 - Hypothesis recorded before capture; live microphone and independently labelled synthetic sine generator.
 - Local FFT visualization through AnalyserNode (4096), 20 Hz visual sampling, 15-second capture limit, effective sample rate and settings metadata.
 - Spectrum, time-based spectrogram, dominant spectral component, RMS in dBFS, short/interrupted/no-tone/clipping diagnostics.
@@ -16,11 +16,19 @@
 ## Stage boundaries
 
 E0: production HTTPS deployment at https://pocketlab-stem.vercel.app (Vercel, static). Device test procedure in docs/DEVICE_TESTS.md. Real iPhone/Android tests are outstanding; no phone hardware has been tested by the agent.
-E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
+E1: client foundation, installable PWA shell, validated contracts, local notebook and CI workflow implemented. A structured AI curriculum and cloud portfolio are still open.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
 E3: manual pendulum (M1), S2 bottle resonance series, M2 phone sensors, shared model-discovery engine and JSON import implemented. Gyro/video pendulum modes and real-apparatus/phone validation remain open.
 E4: video lab with container timing, manual annotation and local automatic tracking implemented (V1 flight/g, V2 bounce h₂/h₁). Real-clip and on-phone validation remain open.
-E5–E7: not implemented.
+E5: classroom mode implemented with a Cloudflare Worker API, durable rooms, teacher/student/class-board screens, QR join, assignments, submissions, live updates and offline submission queue. Local API and browser flows pass; production Vercel-to-Worker routing has not yet been verified against the live deployment.
+E6–E7: AI guidance, Kazakh localization, PDF report and cloud portfolio remain unimplemented.
+
+## Added in the classroom iteration
+
+- Room API backed by a Cloudflare Durable Object, with validated room operations, capability tokens stored as hashes, role-filtered snapshots, server-sent live updates, and idempotent submissions.
+- Teacher flow for creating rooms and assignments; student flow for joining by code/QR and submitting measurements; class screen with live results. A local outbox queues submissions while offline.
+- Classroom submissions contain the chosen pseudonym and measurement values; audio and video are not uploaded.
+- Local Node API supports development and browser tests. Production uses a same-origin `/api/class/*` rewrite to the Worker so the app can retain its restrictive `connect-src 'self'` policy. The live rewrite still needs a deployment smoke test.
 
 ## Added in the mobile-readiness iteration
 
@@ -79,14 +87,16 @@ E5–E7: not implemented.
 3. Move reproducible audio analysis to AudioWorklet + Worker; validated STFT normalization and richer quality metrics.
 4. Validate M1, S2 and M2 with real apparatus and phones (tone plateau and stillness thresholds are engineering guesses; rotationRate units/axes differ across browsers). Then implement gyro/video-based pendulum timing, reusing the M2 recorder.
 5. Offline shell and JSON import are done; add PDF report and global storage quota handling.
-7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
-6. Video: test real iPhone MOV/HEVC and Android MP4 clips (edit lists, rotation, slow motion, seek accuracy on Safari), and tune the tracker thresholds on real footage (motion blur, fast throws, busy backgrounds). Backend/classroom/AI follow stable evidence contracts.
+6. Video: test real iPhone MOV/HEVC and Android MP4 clips (edit lists, rotation, slow motion, seek accuracy on Safari), and tune tracker thresholds on real footage (motion blur, fast throws, busy backgrounds).
+7. Add a reviewed Cloudflare Worker deployment path and required credentials, publish the classroom code plus Vercel rewrite through the tested CI path, then test the live API, concurrent rooms, reconnection, and offline queue recovery.
+8. Design AI guidance, Kazakh localization, PDF reports and a cloud portfolio around the existing evidence contracts.
+9. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
 
 ## Known limitations
 
 - RU only; desktop Chromium automated QA does not establish Safari/mobile sensor support.
 - PWA install, wake lock, share sheet and storage persistence are verified only on desktop Chrome; iOS Safari standalone behavior is untested on hardware.
-- Offline shell only in production builds and only after a first online load; no cloud account, no AI, no classroom, no video or gyro-based pendulum timing yet.
+- Offline shell only in production builds and after a first online load; classroom rooms and synchronization need internet. No AI mentor or cloud portfolio yet; classroom code is not yet on the deployed production branch, and the prepared Worker CI pipeline still requires Cloudflare account setup and a CI API token. No video or gyro-based pendulum timing yet.
 - Audio replay replays saved spectral frames only; raw audio is intentionally not saved.
 - Dominant frequency is not a pitch/fundamental detector; the reported value is a median across qualifying frames and may obscure changing tones.
 - Quality thresholds are initial engineering values, not experimentally validated measurement accuracy.
@@ -105,3 +115,26 @@ E5–E7: not implemented.
 - Notebook opens, resumes and exports pendulum series; resaving increments the version of the same investigation.
 
 Still limited: no automatic pendulum sensor acquisition, no physical setup validation, no statistical confidence interval for fitted g, no cross-tab edit conflict resolution. Draft series must be explicitly saved before leaving the lab; records remain local to the current browser.
+
+
+## Printable notebook reports
+
+- All five saved laboratory views now offer «Печать / PDF», using the browser print dialog. Reports retain hypothesis, conclusion, graphs, result diagnostics, record ID, schema/revision and explicit provenance. Simulation is labelled as educational data.
+- Print layout hides navigation and action controls, expands method/audit details, and restores them after printing without saving a new revision. Sound now also displays its aggregate metrics and algorithm/acquisition settings.
+- This is browser-based printing, not the full planned standalone PDF exporter with bundled RU/KK fonts. Save-to-PDF availability depends on the browser. Physical mobile printing and all-scenario pagination remain open checks.
+
+
+## A5 — notebook backup and atomic restore
+
+- Notebook can prepare and download a consistent IndexedDB snapshot as one JSON array, with record count, size and creation time. Preparation is separate from download so mobile sharing is invoked from a direct user gesture. Snapshot includes unreadable raw rows; no cloud account, room tokens, audio or video are included.
+- Import accepts single-record exports or backup arrays up to 50 MiB. Export refuses snapshots over the same limit with guidance to export individual investigations. All valid records are restored in one IndexedDB read/write transaction; storage failures abort every write. Existing IDs are compared inside that transaction, preventing two simultaneous imports from racing on the same ID.
+- Identical records with the same ID are skipped, conflicting records receive a new ID, invalid rows are counted and skipped. Raw unreadable rows remain in the backup file even though this app cannot restore them. No pre-existing notebook rows are deleted.
+- Remaining A5 work: global storage/quota UI, cross-tab revision conflict handling for normal saves, standalone PDF generation, and optional portfolio sync. Mobile share and actual disk-full behavior still need device checks.
+
+
+## E5 reliability and deployment preparation
+
+- Added tests with 30 simultaneous student SSE connections receiving all 30 submissions at a common revision. Existing tests cover room/role isolation, reconnect, idempotency and revocation. All are local Node-hosted tests, not Cloudflare load acceptance.
+- API checks actual streamed request bytes against 16 KiB even without Content-Length. Failed writes invalidate cached mutable state so subsequent requests read the last persisted room; failed deletion no longer discards a live room. SSE registration shares the room request queue and heartbeat timers stop when the final stream closes.
+- CI now bundles the Worker during checks, requires Cloudflare credentials before production deploy, deploys the Worker before Vercel, derives the same-origin proxy destination from its real URL and checks deployed health. Join limits are separate from creation limits to allow school/proxy shared-IP retries.
+- Wrangler authentication works locally, but Cloudflare returned code 10007 for the account: Workers & Pages must initialize a workers.dev subdomain. No deployment performed. See CLASSROOM_DEPLOY.md for the remaining setup and live acceptance checks.

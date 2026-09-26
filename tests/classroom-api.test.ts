@@ -80,6 +80,33 @@ describe('classroom API', () => {
     await expect(failsWith(api.join(room.code, 'Тридцать первый'))).resolves.toBe('409 ROOM_FULL');
     screen.stop();
   }, 20000);
+  it('30 simultaneous student streams receive the same committed revision', async () => {
+    const room = await api.createRoom('30 live connections');
+    const students = await Promise.all(
+      Array.from({ length: 30 }, (_, i) => api.join(room.code, `Поток ${i}`)),
+    );
+    const streams = students.map((student) => watch(room.code, student.participantToken));
+    try {
+      await Promise.all(streams.map((stream) => stream.until((s) => s.participantCount === 30)));
+      await api.command(room.code, room.ownerToken, { type: 'setState', state: 'collecting' });
+      await Promise.all(
+        students.map((student, i) =>
+          api.submit(room.code, student.participantToken, trial(0.2 + (i % 5) * 0.2)),
+        ),
+      );
+      const views = await Promise.all(
+        streams.map((stream) => stream.until((s) => s.submissions.length === 30)),
+      );
+      expect(new Set(views.map((v) => v.revision)).size).toBe(1);
+      views.forEach((view, i) => {
+        expect(view.me?.id).toBe(students[i].snapshot.me!.id);
+        expect(view.participants).toBeNull();
+      });
+    } finally {
+      streams.forEach((stream) => stream.stop());
+      await api.deleteRoom(room.code, room.ownerToken);
+    }
+  }, 20000);
   it('a dropped stream reconnects and catches up from the latest snapshot', async () => {
     const room = await api.createRoom('');
     let drops = 0;

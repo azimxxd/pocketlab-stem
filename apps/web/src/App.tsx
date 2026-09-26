@@ -125,10 +125,14 @@ export default function App() {
           <div className="local-badge">
             <ShieldCheck size={19} />
             <div>
-              Данные остаются у тебя<small>Измерения без облака</small>
+              {page === 'class' ? (
+                <>Только данные занятия<small>Псевдоним и ответы отправляются учителю</small></>
+              ) : (
+                <>Данные остаются у тебя<small>Лабораторные измерения без облака</small></>
+              )}
             </div>
           </div>
-          <span className="version">POCKETLAB · ПЕРВАЯ СБОРКА</span>
+          <span className="version">POCKETLAB · ИССЛЕДУЙ ФИЗИКУ</span>
         </div>
       </aside>
       <div className="app-body">

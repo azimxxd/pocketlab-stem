@@ -2349,3 +2349,89 @@ textarea {
     display: inline-flex;
   }
 }
+
+/* Local notebook report, using the browser's print/PDF destination. */
+.report-heading {
+  display: none;
+}
+.report-tools {
+  margin-bottom: 20px;
+}
+.report-tools p {
+  margin: 8px 0;
+  max-width: 650px;
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+  body:has(.report-tools) {
+    background: white;
+    font-size: 10pt;
+  }
+  body:has(.report-tools) .sidebar,
+  body:has(.report-tools) .topbar,
+  body:has(.report-tools) .update-banner,
+  body:has(.report-tools) .mobile-nav,
+  body:has(.report-tools) .report-tools,
+  body:has(.report-tools) button,
+  body:has(.report-tools) input,
+  body:has(.report-tools) .result-actions {
+    display: none !important;
+  }
+  body:has(.report-tools) .app {
+    display: block;
+    min-height: 0;
+  }
+  body:has(.report-tools) .app-body,
+  body:has(.report-tools) main {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    max-width: none;
+  }
+  body:has(.report-tools) .report-heading {
+    display: block;
+    border-bottom: 2px solid #183d36;
+    margin-bottom: 20px;
+    overflow-wrap: anywhere;
+  }
+  body:has(.report-tools) p {
+    overflow-wrap: anywhere;
+  }
+  body:has(.report-tools) .discovery-grid {
+    display: block;
+  }
+  body:has(.report-tools) .table-scroll {
+    overflow: visible;
+    max-height: none;
+  }
+  body:has(.report-tools) table {
+    width: 100%;
+    min-width: 0;
+    font-size: 9pt;
+  }
+  body:has(.report-tools) th,
+  body:has(.report-tools) td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  body:has(.report-tools) tr,
+  body:has(.report-tools) .instrument {
+    break-inside: avoid;
+  }
+  body:has(.report-tools) h1,
+  body:has(.report-tools) h2,
+  body:has(.report-tools) h3 {
+    break-after: avoid;
+  }
+  body:has(.report-tools) .instrument {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  body:has(.report-tools) svg,
+  body:has(.report-tools) canvas {
+    max-width: 100%;
+  }
+}

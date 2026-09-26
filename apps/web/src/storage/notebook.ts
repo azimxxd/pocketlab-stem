@@ -44,7 +44,26 @@ export async function saveInvestigation(item: NotebookRecord) {
   await (await db()).put('investigations', notebookRecordSchema.parse(item));
   void requestPersistence();
 }
-const IMPORT_LIMIT_BYTES = 5 * 1024 * 1024;
+const IMPORT_LIMIT_BYTES = 50 * 1024 * 1024;
+/** Read a consistent snapshot, including unreadable rows so a backup never silently drops them. */
+export async function prepareNotebookBackup() {
+  const rows = await (await db()).getAll('investigations');
+  const text = JSON.stringify(rows);
+  const bytes = new Blob([text]).size;
+  if (bytes > IMPORT_LIMIT_BYTES)
+    throw new Error(
+      'Дневник больше 50 МБ. Экспортируй исследования отдельно — эта копия не поместится в лимит восстановления.',
+    );
+  return { text, bytes, count: rows.length, createdAt: new Date().toISOString() };
+}
+export type NotebookBackup = Awaited<ReturnType<typeof prepareNotebookBackup>>;
+export function downloadNotebookBackup(backup: NotebookBackup) {
+  saveFile(
+    `pocketlab-backup-${backup.createdAt.replace(/[:.]/g, '-')}.json`,
+    backup.text,
+    'application/json',
+  );
+}
 /**
  * Imports a JSON file exported by PocketLab: one record or an array. Every record is validated
  * against the current schemas; invalid ones are skipped and counted. An identical record is not
@@ -52,7 +71,7 @@ const IMPORT_LIMIT_BYTES = 5 * 1024 * 1024;
  */
 export async function importRecords(file: Blob) {
   if (file.size > IMPORT_LIMIT_BYTES)
-    throw new Error('Файл больше 5 МБ — это не похоже на экспорт PocketLab.');
+    throw new Error('Файл больше 50 МБ. Импортируй исследования отдельными файлами.');
   let data: unknown;
   try {
     data = JSON.parse(await file.text());
@@ -68,17 +87,37 @@ export async function importRecords(file: Blob) {
     );
   const store = await db();
   const result = { imported: 0, duplicates: 0, copies: 0, invalid: rows.length - valid.length };
-  for (const record of valid) {
-    const existing = await store.get('investigations', record.id);
-    if (existing === undefined) {
-      await store.put('investigations', record);
-      result.imported++;
-    } else if (JSON.stringify(existing) === JSON.stringify(record)) result.duplicates++;
-    else {
-      await store.put('investigations', { ...record, id: crypto.randomUUID() });
-      result.imported++;
-      result.copies++;
+  // One read/write transaction also serializes imports from different tabs.
+  const tx = store.transaction('investigations', 'readwrite');
+  const completed = tx.done;
+  void completed.catch(() => {});
+  try {
+    for (const record of valid) {
+      const existing = await tx.store.get(record.id);
+      if (existing === undefined) {
+        await tx.store.put(record);
+        result.imported++;
+      } else if (JSON.stringify(existing) === JSON.stringify(record)) result.duplicates++;
+      else {
+        await tx.store.add({ ...record, id: crypto.randomUUID() });
+        result.imported++;
+        result.copies++;
+      }
     }
+    await completed;
+  } catch (error) {
+    try {
+      tx.abort();
+    } catch {
+      /* Already aborted or finished. */
+    }
+    await completed.catch(() => {});
+    const quota = error instanceof DOMException && error.name === 'QuotaExceededError';
+    throw new Error(
+      quota
+        ? 'Недостаточно места для восстановления. Ничего не импортировано; дневник не изменён. Освободи место и повтори импорт.'
+        : 'Не удалось завершить импорт. Ничего не импортировано; дневник не изменён. Повтори попытку.',
+    );
   }
   void requestPersistence();
   return result;

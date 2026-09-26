@@ -7,6 +7,7 @@ interface Env {
   /** Comma-separated site origins allowed by CORS. */
   ALLOWED_ORIGINS: string;
   LIMITER?: RateLimit;
+  JOIN_LIMITER?: RateLimit;
 }
 class DurableStorage implements RoomStorage {
   constructor(private storage: DurableObjectStorage) {}
@@ -39,7 +40,10 @@ export default {
     return route(request, {
       room: (code) => env.ROOMS.get(env.ROOMS.idFromName(code)),
       allowedOrigins: env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()),
-      limit: env.LIMITER ? async (key) => (await env.LIMITER!.limit({ key })).success : undefined,
+      limit: async (key) => {
+        const limiter = key.startsWith('join:') ? env.JOIN_LIMITER : env.LIMITER;
+        return limiter ? (await limiter.limit({ key })).success : true;
+      },
     });
   },
 } satisfies ExportedHandler<Env>;
