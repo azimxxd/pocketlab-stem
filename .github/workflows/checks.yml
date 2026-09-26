@@ -50,6 +50,14 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npx --yes vercel@60 pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - run: npx --yes vercel@60 build --prod --token="$VERCEL_TOKEN"
+      # Project settings are written here instead of `vercel pull`: pull needs account/team
+      # access, while a least-privilege project-scoped token can still deploy. The project has
+      # no custom environment variables; build settings mirror vercel.json.
+      - name: Write Vercel project settings
+        run: |
+          mkdir -p .vercel
+          cat > .vercel/project.json <<JSON
+          {"projectId":"$VERCEL_PROJECT_ID","orgId":"$VERCEL_ORG_ID","settings":{"framework":null,"installCommand":"npm ci","buildCommand":"npm run build","outputDirectory":"dist","rootDirectory":null,"nodeVersion":"24.x"}}
+          JSON
+      - run: npx --yes vercel@60 build --prod
       - run: npx --yes vercel@60 deploy --prebuilt --prod --token="$VERCEL_TOKEN"
