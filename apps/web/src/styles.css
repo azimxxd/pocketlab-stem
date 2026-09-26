@@ -1290,6 +1290,101 @@ textarea {
   font-size: 12px;
   fill: #9fb5ae;
 }
+.class-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+.class-grid .white-card,
+.video-workspace + .white-card {
+  margin: 0;
+}
+.text-input {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+.text-input.narrow {
+  width: 100px;
+}
+.code-input {
+  font-size: 22px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.class-list {
+  margin: 14px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+.class-list li.queued {
+  color: #8b6d25;
+}
+.class-list li.rejected {
+  color: #8d432a;
+}
+.qr {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+.join-card {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.code-big {
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: 8px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.state-buttons {
+  margin-top: 10px;
+}
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.class-screen {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.screen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.screen-header h1 {
+  font-size: clamp(28px, 4vw, 52px);
+  margin: 6px 0;
+}
+.screen-join {
+  text-align: center;
+}
+.screen-join .qr {
+  width: 200px;
+  height: 200px;
+}
 @media (min-width: 1500px) {
   main {
     padding-top: 48px;

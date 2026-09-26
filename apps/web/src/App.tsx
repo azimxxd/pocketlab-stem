@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   Wind,
+  Users,
 } from 'lucide-react';
 import type { BottleInvestigation, PendulumInvestigation } from '../../../packages/contracts';
 // Each lab is a separate chunk: a phone downloads only what it opens (all are precached offline).
@@ -34,16 +35,28 @@ const VideoLab = lazy(() => import('./components/VideoLab').then((m) => ({ defau
 const Diagnostics = lazy(() =>
   import('./components/Diagnostics').then((m) => ({ default: m.Diagnostics })),
 );
+const ClassLab = lazy(() =>
+  import('./components/classroom/ClassLab').then((m) => ({ default: m.ClassLab })),
+);
 const Notebook = lazy(() => import('./components/Notebook').then((m) => ({ default: m.Notebook })));
 import { UpdateBanner } from './components/UpdateBanner';
 import { listInvestigations } from './storage/notebook';
 import { confirmLeave } from './platform/leave-guard';
 type Page =
-  'home' | 'sound' | 'pendulum' | 'bottle' | 'motion' | 'video' | 'diagnostics' | 'notebook';
+  | 'home'
+  | 'sound'
+  | 'pendulum'
+  | 'bottle'
+  | 'motion'
+  | 'video'
+  | 'diagnostics'
+  | 'notebook'
+  | 'class';
 const labs: Page[] = ['sound', 'pendulum', 'bottle', 'motion', 'video'];
 function initialPage(): Page {
-  const p = location.hash.slice(1);
-  return [...labs, 'diagnostics', 'notebook'].includes(p as Page) ? (p as Page) : 'home';
+  // Sub-routes such as #class/teach/CODE belong to the page before the first slash.
+  const p = location.hash.slice(1).split('/')[0];
+  return [...labs, 'diagnostics', 'notebook', 'class'].includes(p as Page) ? (p as Page) : 'home';
 }
 export default function App() {
   const [page, setPage] = useState<Page>(initialPage);
@@ -94,6 +107,7 @@ export default function App() {
           {[
             { id: 'home' as Page, label: 'Исследования', icon: Grid2X2 },
             { id: 'notebook' as Page, label: 'Мой дневник', icon: BookOpen },
+            { id: 'class' as Page, label: 'Класс', icon: Users },
             { id: 'diagnostics' as Page, label: 'Датчики', icon: Activity },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -122,21 +136,23 @@ export default function App() {
           <div className="breadcrumb">
             Лаборатория <ChevronRight size={14} />
             <b>
-              {page === 'notebook'
-                ? 'Дневник'
-                : page === 'diagnostics'
-                  ? 'Датчики'
-                  : page === 'sound'
-                    ? 'Звук'
-                    : page === 'bottle'
-                      ? 'Бутылка'
-                      : page === 'motion'
-                        ? 'Датчики движения'
-                        : page === 'video'
-                          ? 'Видео'
-                          : page === 'pendulum'
-                            ? 'Маятник'
-                            : 'Исследования'}
+              {page === 'class'
+                ? 'Класс'
+                : page === 'notebook'
+                  ? 'Дневник'
+                  : page === 'diagnostics'
+                    ? 'Датчики'
+                    : page === 'sound'
+                      ? 'Звук'
+                      : page === 'bottle'
+                        ? 'Бутылка'
+                        : page === 'motion'
+                          ? 'Датчики движения'
+                          : page === 'video'
+                            ? 'Видео'
+                            : page === 'pendulum'
+                              ? 'Маятник'
+                              : 'Исследования'}
             </b>
           </div>
           <div className="header-right">
@@ -169,6 +185,8 @@ export default function App() {
               <MotionLab onBack={() => go('home')} onSaved={refresh} />
             ) : page === 'video' ? (
               <VideoLab onBack={() => go('home')} onSaved={refresh} />
+            ) : page === 'class' ? (
+              <ClassLab />
             ) : page === 'diagnostics' ? (
               <Diagnostics />
             ) : page === 'notebook' ? (

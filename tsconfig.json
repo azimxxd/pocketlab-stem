@@ -12,5 +12,6 @@
     "allowImportingTsExtensions": true,
     "types": ["vite/client", "vite-plugin-pwa/react", "node"]
   },
-  "include": ["apps", "packages", "tests", "scripts", "*.ts"]
+  "include": ["apps", "packages", "tests", "scripts", "*.ts"],
+  "exclude": ["apps/api/src/worker.ts"]
 }
