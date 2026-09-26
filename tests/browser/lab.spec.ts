@@ -35,6 +35,21 @@ test('permission denial has an actionable fallback', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Демосигнал', exact: true })).toBeEnabled();
 });
 test('motion diagnoses actual events, not API presence', async ({ page }) => {
+  // Headless Linux Chromium (CI) may not expose DeviceMotionEvent at all. The test injects its own
+  // synthetic events either way, so provide a minimal constructor only when the browser lacks one.
+  await page.addInitScript(() => {
+    if (typeof DeviceMotionEvent !== 'undefined') return;
+    class FakeDeviceMotionEvent extends Event {
+      accelerationIncludingGravity: unknown;
+      rotationRate: unknown;
+      constructor(type: string, init: Record<string, unknown> = {}) {
+        super(type);
+        this.accelerationIncludingGravity = init.accelerationIncludingGravity ?? null;
+        this.rotationRate = init.rotationRate ?? null;
+      }
+    }
+    Object.assign(window, { DeviceMotionEvent: FakeDeviceMotionEvent });
+  });
   await page.goto('/#diagnostics');
   await page.getByRole('button', { name: 'Проверить движение' }).click();
   await expect(page.locator('.diagnostic-values')).toBeVisible();
