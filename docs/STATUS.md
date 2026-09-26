@@ -16,10 +16,23 @@
 ## Stage boundaries
 
 E0: desktop browser capability work started; real iPhone/Android tests and video codec/timebase spike are outstanding. No phone hardware has been tested by the agent.
-E1: initial client foundation implemented. PWA/service worker, curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
+E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
 E3: manual pendulum and model discovery implemented; S2 and M2, gyro/video pendulum modes, broader device validation remain open.
 E4–E7: not implemented.
+
+## Added in the mobile-readiness iteration
+
+- Installable PWA: web manifest (standalone, RU, maskable icons), apple-touch-icon and iOS meta tags, safe-area insets for the fixed mobile navigation. Workbox service worker precaches the shell for offline use in production builds only; dev server and browser tests run without it.
+- Updates are applied only when the user presses «Обновить» (prompt mode), so a new version never reloads the page during an experiment. A one-time notice confirms offline readiness.
+- Leave guard: unsaved pendulum series, a running timer, or an unsaved sound result ask before in-app navigation, browser back/forward and tab close.
+- Exporting a saved pendulum series now returns the stored revision; previously every JSON/CSV click produced an extra phantom revision and analysis.
+- Notebook no longer hides records that fail schema validation: it reports the count and offers the raw rows as JSON. Nothing is deleted.
+- Persistent storage is requested after the first save (`navigator.storage.persist`); the notebook states whether eviction protection is active.
+- Screen Wake Lock is held during the pendulum timer and sound recording, so a dimming screen does not hide the page and interrupt the attempt. Unsupported/refused locks do not block measurement.
+- JSON/CSV export on touch devices uses the system share sheet (Web Share with files), falling back to a download.
+- Spectrogram draws only appended frames with a precomputed palette instead of repainting every cell at 20 Hz.
+- `@playwright/test` and `@vitejs/plugin-react` pinned instead of `latest`.
 
 ## Next bounded implementation tasks
 
@@ -27,13 +40,15 @@ E4–E7: not implemented.
 2. Extend the scenario-specific v2 Investigation/Trial/Analysis pattern to audio and future scenarios; preserve existing v1 audio records.
 3. Move reproducible audio analysis to AudioWorklet + Worker; validated STFT normalization and richer quality metrics.
 4. Validate the manual pendulum with real apparatus; add S2 bottle resonance and M2 sensor visualization. Then implement sensor/video-based pendulum timing.
-5. Add offline asset caching with update-between-experiments behavior and export/import round-trip.
+5. Offline shell caching is done; add JSON import with export/import round-trip.
+7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
 6. Perform video PTS/codec spike, then calibrated manual annotation. Backend/classroom/AI follow stable evidence contracts.
 
 ## Known limitations
 
 - RU only; desktop Chromium automated QA does not establish Safari/mobile sensor support.
-- No full offline guarantee, no cloud account, no AI, no classroom, no video or gyro-based pendulum timing yet.
+- PWA install, wake lock, share sheet and storage persistence are verified only on desktop Chrome; iOS Safari standalone behavior is untested on hardware.
+- Offline shell only in production builds and only after a first online load; no cloud account, no AI, no classroom, no video or gyro-based pendulum timing yet.
 - Audio replay replays saved spectral frames only; raw audio is intentionally not saved.
 - Dominant frequency is not a pitch/fundamental detector; the reported value is a median across qualifying frames and may obscure changing tones.
 - Quality thresholds are initial engineering values, not experimentally validated measurement accuracy.

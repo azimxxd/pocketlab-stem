@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { BookOpen, Download, Trash2, ArrowLeft, Play, Pause } from 'lucide-react';
 import type { NotebookRecord, PendulumInvestigation } from '../../../../packages/contracts';
-import { listInvestigations, deleteInvestigation, download } from '../storage/notebook';
+import {
+  listInvestigations,
+  deleteInvestigation,
+  download,
+  downloadUnreadable,
+  storagePersisted,
+} from '../storage/notebook';
 import { Spectrum } from './Spectrum';
 import { PendulumResults } from './PendulumResults';
 export function Notebook({
@@ -14,6 +20,8 @@ export function Notebook({
   onResume: (record: PendulumInvestigation) => void;
 }) {
   const [items, setItems] = useState<NotebookRecord[]>([]);
+  const [unreadable, setUnreadable] = useState<unknown[]>([]);
+  const [persisted, setPersisted] = useState<boolean | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<NotebookRecord | null>(null);
@@ -21,7 +29,9 @@ export function Notebook({
   const [playing, setPlaying] = useState(false);
   async function load() {
     try {
-      setItems(await listInvestigations());
+      const { records, unreadable } = await listInvestigations();
+      setItems(records);
+      setUnreadable(unreadable);
     } catch {
       setError('Локальный дневник недоступен. Проверь настройки хранилища браузера.');
     } finally {
@@ -30,6 +40,7 @@ export function Notebook({
   }
   useEffect(() => {
     void load();
+    void storagePersisted().then(setPersisted);
   }, []);
   useEffect(() => {
     if (!playing || !selected || selected.scenarioId !== 'sound-01') return;
@@ -193,6 +204,17 @@ export function Notebook({
           {error}
         </p>
       )}
+      {unreadable.length > 0 && (
+        <div className="error" role="alert">
+          {unreadable.length === 1
+            ? 'Одну запись не удалось прочитать'
+            : `Записей, которые не удалось прочитать: ${unreadable.length}`}
+          . Возможно, она повреждена или создана другой версией приложения. Запись не удалена.{' '}
+          <button className="text-button" onClick={() => downloadUnreadable(unreadable)}>
+            Скачать как есть
+          </button>
+        </div>
+      )}
       {loading ? (
         <p>Открываем дневник…</p>
       ) : items.length === 0 ? (
@@ -257,7 +279,9 @@ export function Notebook({
         </div>
       )}
       <p className="subtle">
-        Дневник хранится только в этом браузере. Экспортируй важные записи перед очисткой данных.
+        {persisted
+          ? 'Дневник хранится только на этом устройстве, и браузер не удалит его автоматически. Экспорт — твоя резервная копия.'
+          : 'Дневник хранится только в этом браузере. Браузер может очистить данные сайта при нехватке места или долгом перерыве (особенно Safari) — экспортируй важные записи.'}
       </p>
     </>
   );

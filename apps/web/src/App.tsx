@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Activity,
   ArrowDownToLine,
@@ -21,7 +21,9 @@ import { PendulumLab } from './components/PendulumLab';
 import { SoundLab } from './components/SoundLab';
 import { Diagnostics } from './components/Diagnostics';
 import { Notebook } from './components/Notebook';
+import { UpdateBanner } from './components/UpdateBanner';
 import { listInvestigations } from './storage/notebook';
+import { confirmLeave } from './platform/leave-guard';
 type Page = 'home' | 'sound' | 'pendulum' | 'diagnostics' | 'notebook';
 function initialPage(): Page {
   const p = location.hash.slice(1);
@@ -29,23 +31,34 @@ function initialPage(): Page {
 }
 export default function App() {
   const [page, setPage] = useState<Page>(initialPage);
+  const pageRef = useRef(page);
+  pageRef.current = page;
   const [count, setCount] = useState(0);
   const [pendulum, setPendulum] = useState<PendulumInvestigation | undefined>(undefined);
   const refresh = () => {
     void listInvestigations()
-      .then((rows) => setCount(rows.length))
+      .then(({ records }) => setCount(records.length))
       .catch(() => {});
   };
   useEffect(() => {
     refresh();
-    const change = () => setPage(initialPage());
+    const change = () => {
+      const next = initialPage();
+      if (next === pageRef.current) return;
+      // Browser back/forward or the brand link: keep unsaved work unless the user agrees.
+      if (!confirmLeave()) history.pushState(null, '', `#${pageRef.current}`);
+      else setPage(next);
+    };
     window.addEventListener('hashchange', change);
     return () => window.removeEventListener('hashchange', change);
   }, []);
   function go(next: Page) {
+    if (next !== page && !confirmLeave()) return false;
+    pageRef.current = next;
     location.hash = next;
     setPage(next);
     window.scrollTo(0, 0);
+    return true;
   }
   return (
     <div className="app">
@@ -110,6 +123,7 @@ export default function App() {
             </span>
           </div>
         </header>
+        <UpdateBanner />
         <main>
           {page === 'sound' ? (
             <SoundLab onBack={() => go('home')} onSaved={refresh} />
@@ -127,8 +141,7 @@ export default function App() {
               onStart={() => go('sound')}
               onChange={refresh}
               onResume={(record) => {
-                setPendulum(record);
-                go('pendulum');
+                if (go('pendulum')) setPendulum(record);
               }}
             />
           ) : (
@@ -229,8 +242,7 @@ export default function App() {
                 <button
                   className="lab-card available"
                   onClick={() => {
-                    setPendulum(undefined);
-                    go('pendulum');
+                    if (go('pendulum')) setPendulum(undefined);
                   }}
                 >
                   <div className="card-top">

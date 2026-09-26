@@ -44,3 +44,10 @@ Local screenshots in ignored `work/` are QA scratch files. Application records u
 - Tests use manually supplied/synthetic values. No claim of hardware timing accuracy or a real pendulum experiment.
 
 Final regression after this iteration: `npm run build` passed, `npm test` passed 27 tests, and `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e` passed all 10 browser tests, including the original sound workflows.
+
+## Mobile-readiness iteration
+
+- `npm run build`: TypeScript and production build including `manifest.webmanifest`, `sw.js` (15 precached entries). `npm test`: 27 passed.
+- `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: 13 passed. New: leave prompt on unsaved series (decline keeps data, accept leaves); saved series exports revision 1 with one analysis on repeated clicks; injected invalid IndexedDB row is reported and downloadable as-is.
+- Production preview in desktop Chrome: service worker activated with scope `/`, manifest and all three icons served (200, image/png). After stopping the preview server, reloading `#pendulum` rendered from the service-worker cache. Offline notice appeared once after install and not on later loads.
+- Not established: PWA installation and standalone mode on iPhone/Android, Wake Lock and Web Share behavior on phones, whether Safari grants persistent storage. Still requires a trusted HTTPS endpoint.

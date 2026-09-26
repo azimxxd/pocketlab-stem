@@ -24,6 +24,8 @@ import {
 import { createPendulumDemo } from '../../../../packages/physics/pendulum-demo';
 import { saveInvestigation, download } from '../storage/notebook';
 import { PendulumResults } from './PendulumResults';
+import { setLeaveGuard } from '../platform/leave-guard';
+import { keepScreenOn } from '../platform/wake-lock';
 export function PendulumLab({
   onBack,
   onSaved,
@@ -52,8 +54,16 @@ export function PendulumLab({
   const [saved, setSaved] = useState(!!initial);
   const [saving, setSaving] = useState(false);
   const documentRef = useRef<PendulumInvestigation | undefined>(initial);
+  const dirty = running || (!saved && trials.length > 0);
+  useEffect(() => {
+    setLeaveGuard(
+      dirty ? 'Серия маятника не сохранена. Уйти и потерять несохранённые попытки?' : null,
+    );
+    return () => setLeaveGuard(null);
+  }, [dirty]);
   useEffect(() => {
     if (!running) return;
+    const releaseScreen = keepScreenOn();
     const timer = setInterval(() => {
       if (started.current !== null) {
         const seconds = (performance.now() - started.current) / 1000;
@@ -75,6 +85,7 @@ export function PendulumLab({
     };
     document.addEventListener('visibilitychange', interrupted);
     return () => {
+      releaseScreen();
       clearInterval(timer);
       document.removeEventListener('visibilitychange', interrupted);
     };
@@ -188,6 +199,8 @@ export function PendulumLab({
       ],
     };
   }
+  /** A saved series exports as stored; a draft exports as the revision a save would create. */
+  const exportable = () => (saved && documentRef.current) || snapshot();
   async function save() {
     setSaving(true);
     setError('');
@@ -522,11 +535,11 @@ export function PendulumLab({
                 {saved ? <Check size={17} /> : <Save size={17} />}{' '}
                 {saved ? 'Серия сохранена' : saving ? 'Сохраняем…' : 'Сохранить серию'}
               </button>
-              <button className="secondary" onClick={() => download(snapshot(), 'json')}>
+              <button className="secondary" onClick={() => download(exportable(), 'json')}>
                 <Download size={16} />
                 JSON
               </button>
-              <button className="secondary" onClick={() => download(snapshot(), 'csv')}>
+              <button className="secondary" onClick={() => download(exportable(), 'csv')}>
                 CSV
               </button>
               <button className="text-button" disabled={running || saving} onClick={reset}>

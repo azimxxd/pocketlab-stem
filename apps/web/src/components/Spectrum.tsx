@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
 import type { SpectrumFrame } from '../../../../packages/contracts';
+const palette = Array.from({ length: 65 }, (_, i) => {
+  const power = i / 64;
+  return `hsl(${170 - power * 95} ${40 + power * 50}% ${9 + power * 61}%)`;
+});
 export function Spectrum({
   frames,
   frequencyMax = 8000,
@@ -8,6 +12,7 @@ export function Spectrum({
   frequencyMax?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const drawn = useRef<{ count: number; last: SpectrumFrame | null }>({ count: 0, last: null });
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -15,21 +20,25 @@ export function Spectrum({
     if (!ctx) return;
     const w = canvas.width,
       h = canvas.height;
-    ctx.fillStyle = '#102c2b';
-    ctx.fillRect(0, 0, w, h);
-    const displayed = frames.slice(-300);
-    displayed.forEach((frame) => {
+    // Live capture and replay only append frames: paint the new columns, not the whole history.
+    const prev = drawn.current;
+    const appended =
+      prev.count > 0 && prev.count <= frames.length && frames[prev.count - 1] === prev.last;
+    if (!appended) {
+      ctx.fillStyle = '#102c2b';
+      ctx.fillRect(0, 0, w, h);
+    }
+    for (let i = appended ? prev.count : 0; i < frames.length; i++) {
+      const frame = frames[i];
+      const x = (frame.t * w) / 15;
+      if (x > w) break;
+      const cell = Math.ceil(h / frame.bins.length);
       frame.bins.forEach((db, y) => {
-        const power = Math.max(0, Math.min(1, (db + 90) / 65));
-        ctx.fillStyle = `hsl(${170 - power * 95} ${40 + power * 50}% ${9 + power * 61}%)`;
-        ctx.fillRect(
-          (frame.t * w) / 15,
-          h - ((y + 1) * h) / frame.bins.length,
-          Math.ceil(w / 300),
-          Math.ceil(h / frame.bins.length),
-        );
+        ctx.fillStyle = palette[Math.round(Math.max(0, Math.min(1, (db + 90) / 65)) * 64)];
+        ctx.fillRect(x, h - ((y + 1) * h) / frame.bins.length, Math.ceil(w / 300), cell);
       });
-    });
+    }
+    drawn.current = { count: frames.length, last: frames.at(-1) ?? null };
   }, [frames]);
   const current = frames.at(-1);
   const path =

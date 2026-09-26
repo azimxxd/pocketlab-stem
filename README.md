@@ -22,6 +22,10 @@ npm run test:e2e
 PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 ```
 
+### Install on a phone (PWA)
+
+`npm run build && npm run preview` serves the production build with a service worker. Once served over HTTPS, the app can be installed: Android Chrome — «Установить приложение»; iPhone Safari — «Поделиться → На экран Домой». After the first load, labs, analysis and the notebook work offline. New versions are applied only when the user presses «Обновить». The service worker is not active under `npm run dev`.
+
 Browser microphone access requires permission. The synthetic demo is silent: it visualizes a generated sine wave and is explicitly labelled. No audio is saved or sent to a server. The notebook is stored on the current browser only.
 
 ## Structure
@@ -33,4 +37,4 @@ Browser microphone access requires permission. The synthetic demo is silent: it 
 - `docs/PLAN_SMARTPHONE_LAB.md`: complete v2 product plan.
 - `docs/STATUS.md`: completed work, limitations and next steps.
 
-This is the first implementation, not the complete planned platform. Manual pendulum now includes timing, series, error bounds, model comparison, exclusion history and saved analysis revisions. Gyro/video timing, video lab, AI, classroom, Kazakh content, full offline support and server synchronization remain future stages. No active UI controls claim these features are working.
+This is the first implementation, not the complete planned platform. Manual pendulum now includes timing, series, error bounds, model comparison, exclusion history and saved analysis revisions. Gyro/video timing, video lab, AI, classroom, Kazakh content, JSON import and server synchronization remain future stages. No active UI controls claim these features are working.

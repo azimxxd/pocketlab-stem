@@ -17,6 +17,8 @@ import { analyzeSound } from '../../../../packages/physics/sound';
 import { startAudio, type AudioSession } from '../acquisition/audio';
 import { saveInvestigation, download } from '../storage/notebook';
 import { Spectrum } from './Spectrum';
+import { setLeaveGuard } from '../platform/leave-guard';
+import { keepScreenOn } from '../platform/wake-lock';
 const reasons: Record<string, string> = {
   TOO_SHORT: 'Запись короче двух секунд. Повтори опыт и запиши хотя бы 5 секунд.',
   NO_STABLE_TONE:
@@ -43,6 +45,7 @@ export function SoundLab({ onBack, onSaved }: { onBack: () => void; onSaved: () 
   const recording = useRef(false);
   const buffer = useRef<SpectrumFrame[]>([]);
   const clipped = useRef(false);
+  const releaseScreen = useRef<(() => void) | null>(null);
   const settings = useRef({
     mode: 'live' as 'live' | 'simulation',
     hypothesis: '',
@@ -51,6 +54,8 @@ export function SoundLab({ onBack, onSaved }: { onBack: () => void; onSaved: () 
   function finish(interrupted = false) {
     if (!recording.current) return;
     recording.current = false;
+    releaseScreen.current?.();
+    releaseScreen.current = null;
     const active = session.current;
     session.current?.stop();
     session.current = null;
@@ -98,6 +103,7 @@ export function SoundLab({ onBack, onSaved }: { onBack: () => void; onSaved: () 
     return () => {
       controller.current?.abort();
       session.current?.stop();
+      releaseScreen.current?.();
       recording.current = false;
       document.removeEventListener('visibilitychange', hidden);
     };
@@ -134,6 +140,7 @@ export function SoundLab({ onBack, onSaved }: { onBack: () => void; onSaved: () 
       }
       session.current = active;
       recording.current = true;
+      releaseScreen.current = keepScreenOn();
       setStatus('recording');
       setTone(440);
     } catch (e) {
@@ -166,6 +173,11 @@ export function SoundLab({ onBack, onSaved }: { onBack: () => void; onSaved: () 
       setSaving(false);
     }
   }
+  const unsaved = !!result && !saved;
+  useEffect(() => {
+    setLeaveGuard(unsaved ? 'Результат записи не сохранён в дневнике. Уйти без сохранения?' : null);
+    return () => setLeaveGuard(null);
+  }, [unsaved]);
   const busy = status === 'recording' || status === 'requesting';
   const current = frames.at(-1);
   const number = (n: number | null | undefined, d = 0) =>
