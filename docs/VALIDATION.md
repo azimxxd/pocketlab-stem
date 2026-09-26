@@ -81,3 +81,10 @@ Final regression after this iteration: `npm run build` passed, `npm test` passed
 - `PLAYWRIGHT_CHANNEL=chrome npm run test:e2e`: 32 passed. New: on the VP9/VFR fixture the tracker follows the ball from one tap until it exits at the bottom (stops with «потерян», correlation 0.24, no invented points); every tracked point within 1.5 px of the generated truth; g from tracked points within 3%; a manual correction on frame 5 replaces the automatic mark in `points` while `autoRuns[0]` keeps the raw value.
 - Production build: tracker worker emitted as its own chunk and included in the service-worker precache (39 entries).
 - Not established: real footage (motion blur, rolling shutter, small or fast balls, cluttered backgrounds, lighting flicker), tracker speed on a weak phone, seek throughput on iPhone Safari with HEVC.
+
+## Deployment — 2026-09-26
+
+- Local production preview with production headers: all five labs exercised (sound demo through Web Audio, bottle and motion demos, video import with container timing, Worker tracker, notebook save) with zero CSP violations and no console errors; service worker activated.
+- Vercel production deploy (`pocketlab-stem.vercel.app`): HTTPS 200; CSP, Permissions-Policy, nosniff, no-referrer, COOP present; Vercel adds HSTS. Hashed assets `max-age=31536000, immutable`; sw.js `no-cache`, index `must-revalidate`. Manifest, icons, favicon, tracker worker served with correct types. Entry bundle hash identical to the local build.
+- Live smoke test in desktop Chrome: secure context, DeviceMotionEvent and getUserMedia available, M2 synthetic recording analysed, service worker installing with precache, no CSP violations.
+- Not established: anything on a phone (see docs/DEVICE_TESTS.md).

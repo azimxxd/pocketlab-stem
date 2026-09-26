@@ -15,7 +15,7 @@
 
 ## Stage boundaries
 
-E0: desktop browser capability work started; real iPhone/Android tests and video codec/timebase spike are outstanding. No phone hardware has been tested by the agent.
+E0: production HTTPS deployment at https://pocketlab-stem.vercel.app (Vercel, static). Device test procedure in docs/DEVICE_TESTS.md. Real iPhone/Android tests are outstanding; no phone hardware has been tested by the agent.
 E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
 E3: manual pendulum (M1), S2 bottle resonance series, M2 phone sensors, shared model-discovery engine and JSON import implemented. Gyro/video pendulum modes and real-apparatus/phone validation remain open.
@@ -74,7 +74,7 @@ E5–E7: not implemented.
 
 ## Next bounded implementation tasks
 
-1. Provision a trusted HTTPS dev URL and complete iPhone/Android permission, cadence and lifecycle matrix; use actual phones.
+1. Run docs/DEVICE_TESTS.md on actual iPhone and Android phones against the production URL and record results in VALIDATION.md.
 2. Extend the scenario-specific v2 Investigation/Trial/Analysis pattern to audio and future scenarios; preserve existing v1 audio records.
 3. Move reproducible audio analysis to AudioWorklet + Worker; validated STFT normalization and richer quality metrics.
 4. Validate M1, S2 and M2 with real apparatus and phones (tone plateau and stillness thresholds are engineering guesses; rotationRate units/axes differ across browsers). Then implement gyro/video-based pendulum timing, reusing the M2 recorder.

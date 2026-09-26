@@ -1,6 +1,6 @@
 # PocketLab STEM
 
-Read docs/PLAN_SMARTPHONE_LAB.md before changing scope. The current stage is a local web implementation, not a deployed Sites project.
+Read docs/PLAN_SMARTPHONE_LAB.md before changing scope. The app is a static PWA deployed to Vercel (https://pocketlab-stem.vercel.app); all measurement and analysis stay on the device.
 
 - Preserve the provenance distinction: live, manual, imported, simulation. Never silently replace a sensor with a simulator.
 - Keep physics in packages/physics; schemas and units in packages/contracts. SI and seconds at the analysis boundary.
@@ -10,4 +10,5 @@ Read docs/PLAN_SMARTPHONE_LAB.md before changing scope. The current stage is a l
 - Keep Russian user-facing copy clear. Future labs are visibly unavailable until implemented.
 - Run npm run build, npm test and npm run test:e2e for changes to capture or analysis flows.
 - Update docs/STATUS.md and docs/VALIDATION.md with real evidence and unresolved checks.
-- Do not add cloud dependencies, secrets, deployment or accounts merely to run the local stage.
+- Deploy only after build, unit and browser tests pass: `npx vercel@60 deploy --prod`. Keep `vercel.json` headers strict (CSP self-only); check `npm run preview`, which serves the same headers, for violations first.
+- Do not add cloud services, secrets or accounts to the client. Future backend work (classroom, AI) lives in its own API with its own review.

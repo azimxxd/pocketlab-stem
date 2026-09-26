@@ -2,6 +2,8 @@
 
 A local-first research laboratory. Sound slice: hypothesis → microphone or labelled synthetic signal → spectrum/spectrogram → analysis → personal conclusion → IndexedDB notebook → replay and CSV/JSON export.
 
+Live: **https://pocketlab-stem.vercel.app** (static PWA on Vercel; nothing is uploaded — recordings, video and the notebook stay on the device).
+
 ## Run
 
 Requires Node.js 22.12+ (developed on Node 24) and npm.
@@ -11,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Localhost is a secure context for browser capture. A phone accessing a plain HTTP LAN address is **not**: provision a trusted HTTPS development endpoint before physical-device testing. No deployment or tunnel is configured yet.
+Open http://127.0.0.1:5173. Localhost is a secure context for browser capture. A phone on a plain HTTP LAN address is **not** — test phones against the HTTPS deployment.
 
 ```sh
 npm run build
@@ -21,6 +23,15 @@ npm run test:e2e
 # Or use an already-installed Chrome:
 PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
 ```
+
+### Deploy
+
+```sh
+npm run build && npm test && PLAYWRIGHT_CHANNEL=chrome npm run test:e2e
+npx vercel@60 deploy --prod
+```
+
+The project is linked to the Vercel project `pocketlab-stem` (local `.vercel/`, not committed). Vercel builds from source with `npm ci && npm run build`; `vercel.json` sets the CSP, permissions policy and cache headers. `npm run preview` serves the same site headers locally. Phone test procedure: `docs/DEVICE_TESTS.md`.
 
 ### Install on a phone (PWA)
 
