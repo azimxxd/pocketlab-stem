@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import hosting from '../../vercel.json';
+// `npm run preview` serves the same site-wide headers as production, so CSP and permission
+// problems show up locally before a deploy.
+const siteHeaders = Object.fromEntries(
+  hosting.headers.find((rule) => rule.source === '/(.*)')!.headers.map((h) => [h.key, h.value]),
+);
 export default defineConfig({
   root: 'apps/web',
   plugins: [
@@ -41,5 +47,6 @@ export default defineConfig({
     }),
   ],
   server: { host: '127.0.0.1', port: 5173, strictPort: true },
+  preview: { headers: siteHeaders },
   build: { outDir: '../../dist', emptyOutDir: true },
 });
