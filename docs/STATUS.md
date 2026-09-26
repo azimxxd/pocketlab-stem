@@ -19,7 +19,7 @@ E0: desktop browser capability work started; real iPhone/Android tests and video
 E1: initial client foundation and installable PWA shell implemented. Curriculum package, API shell and full Investigation/Trial/Analysis revision model remain to be expanded. A GitHub Actions CI workflow is written; remote execution is pending.
 E2: first sound flow implemented. It currently uses AnalyserNode, not the target AudioWorklet/STFT worker architecture. Human usability validation is pending.
 E3: manual pendulum (M1), S2 bottle resonance series, M2 phone sensors, shared model-discovery engine and JSON import implemented. Gyro/video pendulum modes and real-apparatus/phone validation remain open.
-E4: video lab with container timing and manual annotation implemented (V1 flight/g, V2 bounce h₂/h₁). Automatic tracking, in-app camera recording and real-clip validation remain open.
+E4: video lab with container timing, manual annotation and local automatic tracking implemented (V1 flight/g, V2 bounce h₂/h₁). Real-clip and on-phone validation remain open.
 E5–E7: not implemented.
 
 ## Added in the mobile-readiness iteration
@@ -64,6 +64,14 @@ E5–E7: not implemented.
 - Records `video-01` store file metadata, timing source/issues, speed, scale, marks and analysis — never media or blob URLs. Notebook view, CSV (pixels, media time, real time, metres) and JSON.
 - Labs are lazy-loaded chunks (initial JS 470 → 351 kB); all chunks remain precached for offline.
 
+## Added in the E4 auto-tracking iteration
+
+- Local tracker (`packages/vision/tracker.ts`, `ncc-v1`): normalised cross-correlation of a square template around the ball, searched near a constant-velocity prediction scaled by the real frame-interval ratio (VFR), parabolic sub-pixel peak, slow template adaptation only on confident matches. The prediction only centres the search and is never output.
+- Stops, never interpolates: `LOST` (correlation < 0.5), `OUT_OF_FRAME`, `AMBIGUOUS` (a second peak within 0.05 for three frames running; single ambiguous frames are kept but flagged as uncertain), `END`, `CANCELLED`.
+- Runs in a Web Worker on frames downscaled to ≤480 px, taken with the same verified frame seek as manual marking; coordinates are mapped back to video pixels. Progress and cancel in the UI; navigation is locked while running.
+- UI: «Трекинг» tool — tap the ball, size the dashed frame, «Отследить с этого кадра». Blue = tracker, green = manual; a manual mark always replaces an automatic one; a new run replaces older automatic marks on its frames. After a loss the user marks that frame and restarts from it.
+- Records keep every raw run in `autoRuns` (unmodified by later corrections) and the corrected analysis set in `points`, each with `method` (manual/auto/generated) and tracker `score`. Old records parse with `method = manual`. New analysis notes: `AUTO_POINTS`, `TRACK_LOST` (until the lost frame is marked).
+
 ## Next bounded implementation tasks
 
 1. Provision a trusted HTTPS dev URL and complete iPhone/Android permission, cadence and lifecycle matrix; use actual phones.
@@ -72,7 +80,7 @@ E5–E7: not implemented.
 4. Validate M1, S2 and M2 with real apparatus and phones (tone plateau and stillness thresholds are engineering guesses; rotationRate units/axes differ across browsers). Then implement gyro/video-based pendulum timing, reusing the M2 recorder.
 5. Offline shell and JSON import are done; add PDF report and global storage quota handling.
 7. If store distribution is required: wrap the same build with Capacitor (Android/iOS), replace share/download with Filesystem+Share plugins, add native motion sensor plugin for hardware timestamps. Record the decision in DECISIONS.md first — the plan currently states a native app is not required.
-6. Video: test real iPhone MOV/HEVC and Android MP4 clips (edit lists, rotation, slow motion, seek accuracy on Safari), then the local tracker (ROI colour/template tracking in a Worker with explicit loss and manual correction). Backend/classroom/AI follow stable evidence contracts.
+6. Video: test real iPhone MOV/HEVC and Android MP4 clips (edit lists, rotation, slow motion, seek accuracy on Safari), and tune the tracker thresholds on real footage (motion blur, fast throws, busy backgrounds). Backend/classroom/AI follow stable evidence contracts.
 
 ## Known limitations
 

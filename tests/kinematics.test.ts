@@ -26,6 +26,8 @@ function track(
       x: 200 + xr / s + noise * Math.sin(i * 2.7),
       y: 300 - yr / s + noise * Math.cos(i * 1.9),
       uncertain: false,
+      method: 'manual' as const,
+      score: null,
     };
   });
 }
@@ -122,7 +124,15 @@ describe('V2 bounce analysis', () => {
     for (let i = 0; i * (1 / fps) < t1 + (2 * v2) / g; i++) {
       const t = i / fps;
       const h = t <= t1 ? h1Px - 0.5 * g * t * t : v2 * (t - t1) - 0.5 * g * (t - t1) ** 2;
-      out.push({ frame: i, t, x: 100, y: 500 - Math.max(0, h), uncertain: false });
+      out.push({
+        frame: i,
+        t,
+        x: 100,
+        y: 500 - Math.max(0, h),
+        uncertain: false,
+        method: 'manual',
+        score: null,
+      });
     }
     const contactIndex = Math.round(t1 * fps);
     out[contactIndex] = { ...out[contactIndex], t: t1, y: 500 };

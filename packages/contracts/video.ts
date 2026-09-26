@@ -10,18 +10,52 @@ export const videoIssueSchema = z.enum([
   'MODEL_ASSUMPTION',
   'UNCERTAIN_POINTS',
   'CONTACT_MISSING',
+  'AUTO_POINTS',
+  'TRACK_LOST',
   'APEX_EXTRAPOLATED',
   'DEMO_DATA',
 ]);
 export type VideoIssue = z.infer<typeof videoIssueSchema>;
-/** One manual mark: media time of the frame (s) and position in displayed video pixels, y down. */
+/**
+ * One mark: media time of the frame (s) and position in displayed video pixels, y down.
+ * `method` tells who placed it; records from before auto-tracking are manual.
+ */
 export const trackPointSchema = z.object({
   frame: z.number().int().nonnegative(),
   t: finite.nonnegative(),
   x: finite,
   y: finite,
   uncertain: z.boolean(),
+  method: z.enum(['manual', 'auto', 'generated']).default('manual'),
+  /** Tracker correlation for automatic marks. */
+  score: finite.min(-1).max(1).nullable().default(null),
 });
+/** Unmodified output of one tracker run; corrections live in `points`, never here. */
+export const autoRunSchema = z.object({
+  id: z.string().uuid(),
+  algorithmVersion: z.literal('ncc-v1'),
+  startFrame: z.number().int().nonnegative(),
+  radiusPx: finite.positive(),
+  downscale: finite.positive().max(1),
+  points: z
+    .array(
+      z.object({
+        frame: z.number().int().nonnegative(),
+        t: finite.nonnegative(),
+        x: finite,
+        y: finite,
+        score: finite.min(-1).max(1),
+        ambiguous: z.boolean(),
+      }),
+    )
+    .max(3000),
+  stop: z.object({
+    frame: z.number().int().nonnegative().nullable(),
+    reason: z.enum(['LOST', 'OUT_OF_FRAME', 'END', 'CANCELLED', 'AMBIGUOUS']),
+    score: finite.nullable(),
+  }),
+});
+export type AutoRun = z.infer<typeof autoRunSchema>;
 export type TrackPoint = z.infer<typeof trackPointSchema>;
 const quality = z.object({
   status: z.enum(['valid', 'warning', 'invalid']),
@@ -105,6 +139,7 @@ export const videoInvestigationSchema = z
     clickErrorPx: finite.positive().max(50),
     points: z.array(trackPointSchema).max(3000),
     contactFrame: z.number().int().nonnegative().nullable(),
+    autoRuns: z.array(autoRunSchema).max(50).default([]),
     flight: flightAnalysisSchema,
     bounce: bounceAnalysisSchema.nullable(),
   })

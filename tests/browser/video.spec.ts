@@ -114,3 +114,51 @@ test('rejects a file that is not a video', async ({ page }) => {
   });
   await expect(page.getByRole('alert')).toContainText('не смог открыть');
 });
+test('auto-tracking follows the ball, stops at loss and keeps its raw run', async ({ page }) => {
+  await open(page);
+  await page.getByLabel('Обычная съёмка (не замедленная)').check();
+  await clickVideo(page, FIXTURE.ruler.x, FIXTURE.ruler.y1);
+  await clickVideo(page, FIXTURE.ruler.x, FIXTURE.ruler.y2);
+  await page.getByLabel('Длина отрезка масштаба, м').fill('0,5');
+  await page.getByRole('button', { name: 'Трекинг' }).click();
+  await page.getByLabel('Размер рамки трекинга').fill('12');
+  await clickVideo(page, ballAt(0).x, ballAt(0).y);
+  await page.getByRole('button', { name: 'Отследить с этого кадра' }).click();
+  const status = page.locator('.video-workspace p.subtle[role="status"]');
+  await expect(status).toContainText(/потерян|вышел из кадра/, { timeout: 20000 });
+  const heading = page.locator('.video-results .motion-results h3').first();
+  await expect(heading).toContainText('g ≈');
+  const g = Number((await heading.textContent())!.match(/([\d,]+) м/)![1].replace(',', '.'));
+  expect(Math.abs(g - 9.81) / 9.81).toBeLessThan(0.03);
+  await expect(page.locator('.quality-list')).toContainText('поставлена трекером');
+  // Correct one automatic mark by hand: the stored raw run must not change.
+  await page.getByRole('button', { name: 'Мяч', exact: true }).click();
+  for (let i = 0; i < 20; i++) {
+    if ((await page.locator('.frame-label').first().textContent())!.includes('Кадр 5/')) break;
+    await page.getByRole('button', { name: 'Предыдущий кадр' }).click();
+  }
+  await expect(page.locator('.frame-label').first()).toContainText('Кадр 5/');
+  const p = ballAt(FIXTURE.times[4]);
+  await clickVideo(page, p.x + 1, p.y);
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'JSON', exact: true }).click();
+  const stream = await (await download).createReadStream();
+  let json = '';
+  for await (const chunk of stream!) json += chunk;
+  const record = JSON.parse(json);
+  const run = record.autoRuns[0];
+  expect(run.algorithmVersion).toBe('ncc-v1');
+  expect(run.points.length).toBeGreaterThanOrEqual(10);
+  const raw = run.points.find((q: { frame: number }) => q.frame === 4);
+  expect(Math.abs(raw.x - p.x)).toBeLessThan(1);
+  const corrected = record.points.find((q: { frame: number }) => q.frame === 4);
+  expect(corrected.method).toBe('manual');
+  expect(corrected.x).toBeCloseTo(p.x + 1, 0);
+  expect(record.points.filter((q: { method: string }) => q.method === 'auto').length).toBe(
+    run.points.length - 1,
+  );
+  for (const q of run.points) {
+    const truth = ballAt(q.t);
+    expect(Math.hypot(q.x - truth.x, q.y - truth.y)).toBeLessThan(1.5);
+  }
+});

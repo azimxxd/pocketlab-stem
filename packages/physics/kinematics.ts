@@ -74,6 +74,8 @@ export type FlightOptions = {
   timebaseKnown: boolean;
   clickErrorPx: number;
   simulation?: boolean;
+  /** A tracker run stopped because the object was lost inside the clip. */
+  trackLost?: boolean;
 };
 /** Points in display pixels → metres (y up) and real seconds, relative to the first point. */
 export function toWorld(points: TrackPoint[], metersPerPx: number, timeFactor: number) {
@@ -101,6 +103,8 @@ export function analyzeFlight(raw: TrackPoint[], o: FlightOptions): FlightAnalys
   if (o.metersPerPx === null) reasons.push('SCALE_MISSING');
   else if (o.scaleRelBound > 0.05) reasons.push('SCALE_UNCERTAIN');
   if (points.some((p) => p.uncertain)) reasons.push('UNCERTAIN_POINTS');
+  if (points.some((p) => p.method === 'auto')) reasons.push('AUTO_POINTS');
+  if (o.trackLost) reasons.push('TRACK_LOST');
   if (o.simulation) reasons.push('DEMO_DATA');
   const fx = fitQuadratic(
     world.map((p) => p.t),
@@ -168,6 +172,7 @@ export function analyzeBounce(
   if (!o.timebaseKnown) reasons.push('TIME_SCALE_UNKNOWN');
   if (o.simulation) reasons.push('DEMO_DATA');
   if (points.some((p) => p.uncertain)) reasons.push('UNCERTAIN_POINTS');
+  if (points.some((p) => p.method === 'auto')) reasons.push('AUTO_POINTS');
   const contact = points.find((p) => p.frame === contactFrame);
   const invalid = (reason: VideoIssue): BounceAnalysis => ({
     algorithmVersion: 'bounce-v1',
@@ -233,6 +238,8 @@ export function createFlightDemo(): TrackPoint[] {
       x: 120 + (1.1 * t) / s + noise(0),
       y: 80 - (0.4 * t - 0.5 * 9.81 * t * t) / s + noise(1),
       uncertain: false,
+      method: 'generated' as const,
+      score: null,
     };
   });
 }
