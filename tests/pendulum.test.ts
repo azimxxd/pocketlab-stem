@@ -1,169 +1,188 @@
-import { describe, it, expect } from 'vitest';
-import {
-  analyzePendulum,
-  comparePendulum,
-  parseDecimal,
-  trialSelection,
-} from '../packages/physics/pendulum';
-import {
-  pendulumInputSchema,
-  pendulumInvestigationSchema,
-  type PendulumTrial,
-  type PendulumInput,
-} from '../packages/contracts';
-const input: PendulumInput = {
-  lengthM: 0.5,
-  cycles: 10,
-  elapsedS: 14.2,
-  lengthErrorM: 0.005,
-  timingErrorS: 0.3,
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { PendulumAnalyzer } from "../src/pendulum";
+import type { Calibration } from "../src/core";
+import type { SensorSample } from "../src/contracts";
+
+const bias = [1.2, -0.7, 2.1] as const;
+const stationaryCalibration: Calibration = {
+  durationMs: 2600,
+  rate: 100,
+  stable: true,
+  reason: "test",
+  channels: {
+    "rotationRate.alpha": {
+      count: 260,
+      mean: bias[0],
+      sd: 0.025,
+      min: 1.1,
+      max: 1.3,
+    },
+    "rotationRate.beta": {
+      count: 260,
+      mean: bias[1],
+      sd: 0.025,
+      min: -0.8,
+      max: -0.6,
+    },
+    "rotationRate.gamma": {
+      count: 260,
+      mean: bias[2],
+      sd: 0.025,
+      min: 2,
+      max: 2.2,
+    },
+  },
 };
-const trial = (length: number, period: number): PendulumTrial => ({
-  id: crypto.randomUUID(),
-  createdAt: new Date().toISOString(),
-  provenance: 'manual',
-  acquisitionKind: 'entered',
-  input: { ...input, lengthM: length, elapsedS: period * 10 },
-});
-const lengths = [0.2, 0.35, 0.5, 0.75, 1];
-describe('manual pendulum and discovery', () => {
-  it('uses complete periods and SI, not half-period or cm', () => {
-    const a = analyzePendulum(input);
-    expect(a.period).toBe(1.42);
-    expect(a.g).toBeCloseTo(9.78933, 3);
-    expect(a.periodError).toBeCloseTo(0.03);
-  });
-  it('propagates bounded errors through extrema, not a confidence interval', () => {
-    const a = analyzePendulum(input);
-    expect(a.gLow).toBeCloseTo((4 * Math.PI ** 2 * 0.495) / 1.45 ** 2);
-    expect(a.gHigh).toBeCloseTo((4 * Math.PI ** 2 * 0.505) / 1.39 ** 2);
-    expect(a.gLow).toBeLessThan(a.g);
-    expect(a.gHigh).toBeGreaterThan(a.g);
-  });
-  it('rejects nonphysical and malformed inputs without clamping', () => {
-    for (const patch of [
-      { cycles: 0 },
-      { cycles: 2.5 },
-      { lengthM: NaN },
-      { elapsedS: 0 },
-      { timingErrorS: 20 },
-      { lengthErrorM: 1 },
-    ])
-      expect(pendulumInputSchema.safeParse({ ...input, ...patch }).success).toBe(false);
-  });
-  it('accepts decimal commas and rejects empty/ambiguous numeric text', () => {
-    expect(parseDecimal(' 0,50 ')).toBe(0.5);
-    for (const value of ['', '1,2,3', '-1', 'Infinity', '1e3', '0x10'])
-      expect(parseDecimal(value)).toBeNaN();
-  });
-  it('does not force a measured g to the reference value', () => {
-    expect(analyzePendulum({ ...input, elapsedS: 20 }).g).toBeCloseTo(Math.PI ** 2 / 2);
-  });
-  it('identifies root model and recovers slope-derived gravity', () => {
-    const data = lengths.map((l) => trial(l, 2 * Math.PI * Math.sqrt(l / 9.7)));
-    const r = comparePendulum(data);
-    expect(r.bestModel).toBe('sqrt');
-    expect(r.squaredFit?.g).toBeCloseTo(9.7, 10);
-    expect(r.fits.find((f) => f.model === 'sqrt')?.cvRmse).toBeLessThan(1e-12);
-  });
-  it('identifies a linear dataset instead of preferring a physics answer', () => {
-    expect(comparePendulum(lengths.map((l) => trial(l, 1 + 2 * l))).bestModel).toBe('linear');
-  });
-  it('does not choose a winner for identical periods with tied models', () => {
-    expect(comparePendulum(lengths.map((l) => trial(l, 1.5))).status).toBe('ambiguous');
-  });
-  it('repeated measurements of one length do not count as five conditions', () => {
-    const r = comparePendulum(Array.from({ length: 15 }, () => trial(0.5, 1.42)));
-    expect(r.distinctLengths).toBe(1);
-    expect(r.status).toBe('insufficient');
-    expect(r.fits.every((f) => f.cvRmse === null)).toBe(true);
-    expect(r.squaredFit).toBeNull();
-  });
-  it('does not choose a winner in a narrow length range', () => {
-    const r = comparePendulum([0.5, 0.51, 0.52, 0.53, 0.54].map((l) => trial(l, 2 * Math.sqrt(l))));
-    expect(r.status).toBe('narrow-range');
-    expect(r.bestModel).toBeNull();
-  });
-  it('holds all repeats at a length out together', () => {
-    const base = lengths.map((l) => trial(l, 2 * Math.sqrt(l) + 0.05 * l));
-    const repeat = base.flatMap((t) => [t, { ...t, id: crypto.randomUUID() }]);
-    const one = comparePendulum(base),
-      two = comparePendulum(repeat);
-    for (const fit of one.fits)
-      expect(two.fits.find((f) => f.model === fit.model)?.cvRmse).toBeCloseTo(fit.cvRmse!, 12);
-  });
-  it('exclusion preserves data and a restore event brings the trial back', () => {
-    const data = lengths.map((l) => trial(l, 2 * Math.sqrt(l)));
-    const event = {
-      id: crypto.randomUUID(),
-      trialId: data[0].id,
-      included: false,
-      reason: 'Mistimed cycle',
-      at: new Date().toISOString(),
-    };
-    expect(comparePendulum(data, [event]).distinctLengths).toBe(4);
-    expect(data).toHaveLength(5);
-    const restore = { ...event, id: crypto.randomUUID(), included: true, reason: 'Restored' };
-    expect(trialSelection(data, [event, restore])[0].included).toBe(true);
-    expect(comparePendulum(data, [event, restore]).distinctLengths).toBe(5);
-  });
-  it('prevents fitting simulated data with manual observations', () => {
-    expect(() =>
-      comparePendulum([
-        trial(0.2, 1),
-        { ...trial(0.5, 1.4), provenance: 'simulation', acquisitionKind: 'simulation' },
-      ]),
-    ).toThrow(/mixed/);
-  });
-  it('allows an entirely excluded series without NaN', () => {
-    const data = [trial(0.5, 1.42)];
-    const r = comparePendulum(data, [
-      {
-        id: crypto.randomUUID(),
-        trialId: data[0].id,
-        included: false,
-        reason: 'Counter error',
-        at: new Date().toISOString(),
+
+function fixture(
+  period: number,
+  axis: [number, number, number],
+  options: {
+    noise?: number;
+    decay?: boolean;
+    jitter?: boolean;
+    drops?: boolean;
+    seed?: number;
+    duration?: number;
+  } = {},
+) {
+  const analyzer = new PendulumAnalyzer(stationaryCalibration);
+  let seed = options.seed ?? 47;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296 - 0.5;
+  };
+  let previousTime = 0,
+    sequence = 0;
+  for (let i = 0; i < Math.ceil((options.duration ?? 18) * 100); i++) {
+    if (options.drops && i % 43 === 17) continue;
+    const jitter = options.jitter ? random() * 5 : 0;
+    const timestamp = Math.max(previousTime + 1, i * 10 + jitter);
+    previousTime = timestamp;
+    const t = timestamp / 1000,
+      envelope = options.decay ? Math.exp(-0.035 * t) : 1;
+    const wave = 9 * envelope * Math.cos((2 * Math.PI * t) / period);
+    const n = options.noise ?? 0;
+    const measured = axis.map(
+      (component, index) => bias[index] + component * wave + random() * n,
+    );
+    const sample: SensorSample = {
+      sequence: sequence++,
+      timestamp,
+      source: "motion",
+      acceleration: { x: null, y: null, z: null },
+      accelerationIncludingGravity: { x: null, y: null, z: null },
+      rotationRate: {
+        alpha: measured[0],
+        beta: measured[1],
+        gamma: measured[2],
       },
-    ]);
-    expect(r.fits).toHaveLength(0);
-    expect(r.status).toBe('insufficient');
-    expect(r.lengthRatio).toBe(0);
-  });
-  it('validates the versioned series and its references', () => {
-    const trials = [trial(0.5, 1.42)];
-    const now = new Date().toISOString();
-    const doc = {
-      schemaVersion: 2,
-      scenarioId: 'pendulum-01',
-      scenarioVersion: 1,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-      revision: 1,
-      provenance: 'manual',
-      hypothesis: 'T grows',
-      hypothesisAt: now,
-      conclusion: 'More data needed',
-      trials,
-      selectionEvents: [],
-      analyses: [
-        {
-          id: crypto.randomUUID(),
-          at: now,
-          revision: 1,
-          conclusion: 'More data needed',
-          selectionEventIds: [],
-          result: comparePendulum(trials),
-        },
-      ],
+      orientation: { alpha: null, beta: null, gamma: null },
+      orientationTimestamp: null,
+      screenAngle: 0,
     };
-    expect(pendulumInvestigationSchema.safeParse(doc).success).toBe(true);
-    expect(
-      pendulumInvestigationSchema.safeParse({ ...doc, trials: [...trials, ...trials] }).success,
-    ).toBe(false);
-    expect(
-      pendulumInvestigationSchema.safeParse({ ...doc, provenance: 'simulation' }).success,
-    ).toBe(false);
+    analyzer.add(sample);
+  }
+  return analyzer;
+}
+
+for (const period of [0.8, 1, 1.5, 2]) {
+  test(`detects complete signed oscillations for true T=${period}s`, () => {
+    const analyzer = fixture(period, [1, 0, 0]),
+      result = analyzer.finish();
+    assert.ok(
+      analyzer.periods.length >= 5,
+      `period count ${analyzer.periods.length}`,
+    );
+    assert.ok(
+      Math.abs(result.periodSec! - period) < 0.025,
+      `measured ${result.periodSec}`,
+    );
+    assert.ok(Math.abs(result.frequencyHz! - 1 / period) < 0.025);
   });
+}
+
+test("T/2 regression: true 2.0 s period is not reported as 1.0 s", () => {
+  const analyzer = fixture(2, [0.3, 0.4, 0.8660254]);
+  const result = analyzer.finish();
+  assert.ok(Math.abs(result.periodSec! - 2) < 0.02, JSON.stringify(result));
+  assert.ok(Math.abs(result.periodSec! - 1) > 0.9);
+  assert.equal(analyzer.export().algorithmVersion, "pca-zero-crossing-1.0.0");
+  assert.ok(analyzer.export().processedSignal.length > 1000);
+  assert.ok(analyzer.export().crossings.length > 10);
+  assert.ok(analyzer.export().individualPeriods.length >= 5);
+});
+
+test("PCA recovers a signed signal for arbitrary phone gyro orientations", () => {
+  const axes: [
+    [number, number, number],
+    [number, number, number],
+    [number, number, number],
+  ] = [
+    [1, 0, 0],
+    [0, 1, 0],
+    [0.2672612, -0.5345225, 0.8017837],
+  ];
+  for (const axis of axes) {
+    const a = fixture(1.5, axis, { noise: 0.12 });
+    const r = a.finish();
+    assert.ok(Math.abs(r.periodSec! - 1.5) < 0.025, JSON.stringify(r));
+    assert.ok(r.dominantAxis);
+    assert.ok(
+      Math.abs(r.dominantAxis.reduce((sum, v, i) => sum + v * axis[i], 0)) >
+        0.98,
+    );
+    assert.ok(a.processedSignal.some((p) => p.value !== null && p.value < 0));
+    assert.ok(a.processedSignal.some((p) => p.value !== null && p.value > 0));
+  }
+});
+
+test("tolerates noise, gyro bias, decaying amplitude, timestamp jitter and dropped samples", () => {
+  const analyzer = fixture(1.2, [0.3, 0.4, 0.8660254], {
+    noise: 0.2,
+    decay: true,
+    jitter: true,
+    drops: true,
+    seed: 2026,
+  });
+  const result = analyzer.finish();
+  assert.ok(result.periodSec !== null, JSON.stringify(result));
+  assert.ok(Math.abs(result.periodSec! - 1.2) < 0.04, JSON.stringify(result));
+  assert.ok(analyzer.crossings.length > analyzer.periods.length);
+});
+
+test("does not give a period estimate for multi-axis chaotic rotation", () => {
+  const analyzer = new PendulumAnalyzer(stationaryCalibration);
+  for (let i = 0; i < 2400; i++) {
+    const timestamp = i * 10,
+      t = timestamp / 1000;
+    const sample: SensorSample = {
+      sequence: i,
+      timestamp,
+      source: "motion",
+      acceleration: { x: null, y: null, z: null },
+      accelerationIncludingGravity: { x: null, y: null, z: null },
+      rotationRate: {
+        alpha: bias[0] + 7 * Math.cos((2 * Math.PI * t) / 1.1),
+        beta: bias[1] + 7 * Math.cos((2 * Math.PI * t) / 1.7),
+        gamma: bias[2] + 6 * Math.sin((2 * Math.PI * t) / 0.8),
+      },
+      orientation: { alpha: null, beta: null, gamma: null },
+      orientationTimestamp: null,
+      screenAngle: 0,
+    };
+    analyzer.add(sample);
+  }
+  const result = analyzer.finish();
+  assert.equal(result.periodSec, null);
+  assert.match(result.quality, /нескольких направлениях|хаотичное/);
+});
+
+test("requires five valid complete periods before publishing a result", () => {
+  const short = fixture(2, [0, 0, 1], { duration: 6 });
+  const result = short.finish();
+  assert.ok(short.periods.length < 5);
+  assert.equal(result.periodSec, null);
+  assert.equal(result.frequencyHz, null);
 });

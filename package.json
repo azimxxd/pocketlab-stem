@@ -1,38 +1,35 @@
 {
-  "name": "pocketlab-stem",
+  "name": "pocketlab-sensor-mvp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config apps/web/vite.config.ts",
-    "build": "tsc --noEmit && tsc --noEmit -p apps/api && vite build --config apps/web/vite.config.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/api",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
-    "preview": "vite preview --config apps/web/vite.config.ts",
-    "api": "tsx apps/api/src/node-server.ts"
+    "dev": "tsx server/index.ts",
+    "build": "tsc --noEmit && vite build",
+    "start": "tsx server/index.ts --production",
+    "test": "tsx --test tests/*.test.ts",
+    "test:browser": "tsx tests/browser.ts",
+    "check": "tsc --noEmit",
+    "test:sound-browser": "tsx tests/sound-browser.ts"
   },
   "dependencies": {
-    "idb": "^8.0.0",
-    "lucide-react": "^0.468.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "uqr": "^0.1.3",
-    "zod": "^4.0.0"
+    "express": "^5.1.0",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
+    "three": "^0.180.0",
+    "ws": "^8.18.3",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260926.1",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.55.1",
+    "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@types/qrcode": "^1.5.5",
+    "@types/three": "^0.180.0",
+    "@types/ws": "^8.18.1",
     "prettier": "^3.9.9",
-    "tsx": "^4.23.15",
-    "typescript": "^5.9.0",
-    "vite": "^8.3.1",
-    "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^5.0.2",
-    "wrangler": "^4.141.0"
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7"
   }
 }

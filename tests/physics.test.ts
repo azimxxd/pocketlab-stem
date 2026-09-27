@@ -1,56 +1,92 @@
-import { describe, it, expect } from 'vitest';
-import { analyzeSound, dominantPeak, rmsDb, displayBins } from '../packages/physics/sound';
-import { investigationSchema } from '../packages/contracts';
-const frame = (t: number, hz: number | null = 440, db: number | null = -20) => ({
-  t,
-  peakHz: hz,
-  rmsDb: db,
-  peakProminenceDb: 20,
-  bins: [-90, -20, -90],
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  estimateGravity,
+  parseLengthUncertaintyCm,
+  parsePendulumLengthCm,
+  REFERENCE_GRAVITY_MS2,
+} from "../src/physics";
+
+test("measured period and length recover the reference value near Earth", () => {
+  const period = 2 * Math.PI * Math.sqrt(1 / REFERENCE_GRAVITY_MS2),
+    result = estimateGravity({ lengthMeters: 1, periodSeconds: period });
+  assert.equal(result.valid, true);
+  if (!result.valid) return;
+  assert.ok(Math.abs(result.gravityMs2 - 9.81) < 1e-10);
+  assert.equal(result.uncertaintyMs2, undefined);
 });
-describe('sound analysis', () => {
-  for (const fs of [44100, 48000])
-    for (const hz of [440, 1000])
-      it(`finds a spectral maximum at ${hz} Hz / ${fs}`, () => {
-        const bins = new Float32Array(2048).fill(-95);
-        bins[Math.round((hz * 4096) / fs)] = -20;
-        expect(dominantPeak(bins, fs, 4096).hz).toBeCloseTo(
-          (Math.round((hz * 4096) / fs) * fs) / 4096,
-        );
-      });
-  it('does not invent a pitch for silence or flat noise', () => {
-    expect(dominantPeak(new Float32Array(2048).fill(-Infinity), 48000, 4096).hz).toBeNull();
-    expect(dominantPeak(new Float32Array(2048).fill(-30), 48000, 4096).hz).toBeNull();
+
+test("half-meter pendulum uses the measured period without adjustment", () => {
+  const period = 2 * Math.PI * Math.sqrt(0.5 / 9.81),
+    result = estimateGravity({ lengthMeters: 0.5, periodSeconds: period });
+  assert.equal(result.valid, true);
+  if (!result.valid) return;
+  assert.ok(Math.abs(result.gravityMs2 - 9.81) < 1e-10);
+  assert.equal(result.referenceGravityMs2, 9.81);
+});
+
+test("rejects empty, non-finite, negative, zero and tiny UI lengths", () => {
+  for (const value of ["", "NaN", "-2", "0", "0.9"])
+    assert.equal(parsePendulumLengthCm(value).valid, false, value);
+  assert.deepEqual(parsePendulumLengthCm("50"), {
+    valid: true,
+    lengthMeters: 0.5,
   });
-  it('uses RMS and represents silence as missing logarithmic level', () => {
-    expect(rmsDb(new Float32Array([0.5, -0.5]))).toBeCloseTo(-6.0206);
-    expect(rmsDb(new Float32Array(10))).toBeNull();
-    expect(rmsDb(new Float32Array([NaN]))).toBeNull();
+  assert.deepEqual(parsePendulumLengthCm("50,5"), {
+    valid: true,
+    lengthMeters: 0.505,
   });
-  it('averages power, not dB', () => {
-    const result = analyzeSound([frame(1, 440, -10), frame(3, 440, -30)]);
-    expect(result.averageDb).toBeCloseTo(10 * Math.log10(0.0505));
-  });
-  it('short and interrupted captures cannot produce a trusted frequency', () => {
-    expect(analyzeSound([frame(0.3)]).peakHz).toBeNull();
-    const result = analyzeSound([frame(1), frame(3)], true);
-    expect(result.quality.status).toBe('invalid');
-    expect(result.peakHz).toBeNull();
-  });
-  it('retains simulation provenance as a quality note', () => {
-    expect(analyzeSound([frame(1), frame(3)], false, true).quality.reasons).toContain('DEMO_DATA');
-  });
-  it('flags missing tone and clipping independently', () => {
-    const result = analyzeSound([frame(1, null), frame(3, null)], false, false, true);
-    expect(result.quality.reasons).toContain('NO_STABLE_TONE');
-    expect(result.quality.reasons).toContain('CLIPPING');
-  });
-  it('keeps display bins finite', () => {
-    expect(displayBins(new Float32Array(2048).fill(-Infinity)).every(Number.isFinite)).toBe(true);
-  });
-  it('rejects invalid imported record shape', () => {
-    expect(investigationSchema.safeParse({ schemaVersion: 1, frames: [{ t: NaN }] }).success).toBe(
+});
+
+test("rejects zero and negative periods and invalid physical lengths", () => {
+  for (const periodSeconds of [0, -1, Number.NaN])
+    assert.equal(
+      estimateGravity({ lengthMeters: 1, periodSeconds }).valid,
       false,
     );
+  assert.equal(
+    estimateGravity({ lengthMeters: 0, periodSeconds: 2 }).valid,
+    false,
+  );
+});
+
+test("propagates stated length and period uncertainty only when both are known", () => {
+  const lengthMeters = 0.5,
+    periodSeconds = 2 * Math.PI * Math.sqrt(lengthMeters / 9.81),
+    lengthUncertaintyMeters = 0.005,
+    periodUncertaintySeconds = 0.01,
+    result = estimateGravity({
+      lengthMeters,
+      periodSeconds,
+      lengthUncertaintyMeters,
+      periodUncertaintySeconds,
+    });
+  assert.equal(result.valid, true);
+  if (!result.valid) return;
+  const expected =
+    result.gravityMs2 *
+    Math.sqrt(
+      (lengthUncertaintyMeters / lengthMeters) ** 2 +
+        ((2 * periodUncertaintySeconds) / periodSeconds) ** 2,
+    );
+  assert.ok(Math.abs((result.uncertaintyMs2 ?? 0) - expected) < 1e-12);
+  assert.ok(result.relativeDifferencePercent < 1e-10);
+  const withoutLengthUncertainty = estimateGravity({
+    lengthMeters,
+    periodSeconds,
+    periodUncertaintySeconds,
   });
+  assert.equal(
+    withoutLengthUncertainty.valid && withoutLengthUncertainty.uncertaintyMs2,
+    undefined,
+  );
+});
+
+test("optional length uncertainty stays unknown when blank and rejects negatives", () => {
+  assert.deepEqual(parseLengthUncertaintyCm(""), { valid: true });
+  assert.deepEqual(parseLengthUncertaintyCm("0,5"), {
+    valid: true,
+    uncertaintyMeters: 0.005,
+  });
+  assert.equal(parseLengthUncertaintyCm("-0.5").valid, false);
 });

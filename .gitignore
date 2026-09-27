@@ -1,13 +1,7 @@
 node_modules/
 dist/
-.env
-.env.*
-!.env.example
-playwright-report/
+certs/
 test-results/
-.DS_Store
-
-work/
-.vercel
-.dev.vars
-.wrangler/
+playwright-report/
+*.log
+.env

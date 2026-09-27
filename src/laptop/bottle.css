@@ -1,0 +1,48 @@
+.bottle-lab .hero { grid-template-columns:94px minmax(0,1fr); }
+.bottle-lab .main-navigation a { white-space:nowrap; }
+.bottle-lab .main-workspace { position:relative; }
+.bottle-lock { min-height:285px;padding:clamp(24px,4vw,42px)!important;border-top:4px solid #cbd5e1!important;background:linear-gradient(120deg,#f8fafc,#eef2f7)!important; }
+.bottle-lock h2 { margin:0 0 8px;color:#64748b!important;font-size:clamp(23px,2.4vw,31px)!important; }
+.bottle-lock p { max-width:650px;color:#64748b; }
+.bottle-lab .main-workspace.is-locked > :not(#bottle-lock) { display:none!important; }
+.bottle-lab .main-workspace.is-locked #bottle-lock { opacity:1; }
+.bottle-stage-card { display:flex;align-items:center;gap:8px;padding:10px 14px!important; }
+.bottle-stage-card .stage { display:flex;flex:1;align-items:center;gap:10px;min-width:0;border:0;border-radius:10px;text-align:left;cursor:pointer; }
+.bottle-stage-card .stage strong,.bottle-stage-card .stage small { display:block;white-space:nowrap; }
+.bottle-stage-card .stage small { margin-top:3px;font-size:11px; }
+.bottle-stage-card .stage:disabled { cursor:not-allowed; }
+.bottle-stage-card .stage.is-active { color:#c2410c;background:#fff0df;box-shadow:inset 0 0 0 1px #fed7aa; }
+.bottle-stage-card .stage.is-active .stage-icon { color:#fff;background:linear-gradient(140deg,#fb923c,#ea580c); }
+.bottle-stage-card .stage.is-complete { color:#1d4ed8; }
+.bottle-stage-card .stage.is-complete .stage-icon { color:#fff;background:linear-gradient(140deg,#60a5fa,#2563eb); }
+.bottle-stage-card .stage.is-locked { opacity:.48;filter:grayscale(1); }
+.bottle-condition { border-top:4px solid var(--lab-orange)!important; }
+.condition-heading,.measure-row,.graph-heading { display:flex;align-items:center;justify-content:space-between;gap:16px; }
+.condition-heading h2,.bottle-series h2 { margin:0; }
+.bottle-setup { display:flex;align-items:end;gap:14px;margin:22px 0 8px; }
+.bottle-setup label,.condition-values>label,.prediction-card>label { color:#263b60;font-weight:700; }
+.bottle-input { display:flex;align-items:center;margin-top:7px; }
+.bottle-input input { width:145px;min-height:48px;padding:8px 12px;border:1px solid #cbd5e1;border-radius:10px 0 0 10px;font-size:21px; }
+.bottle-input span { display:grid;place-items:center;min-height:48px;min-width:52px;margin-left:-1px;border:1px solid #cbd5e1;border-radius:0 10px 10px 0;background:#f8fafc;color:#64748b; }
+.bottle-stage { display:grid;grid-template-columns:minmax(210px,300px) minmax(210px,1fr);align-items:center;gap:34px;padding:20px 26px;background:#fffaf4;border-radius:15px; }
+.bottle-illustration { width:150px;margin:0 auto; }
+.bottle-neck { width:46px;height:34px;margin:auto;border:4px solid #a8b4c4;border-bottom:0;border-radius:11px 11px 0 0;background:#ffffffa8; }
+.bottle-body { position:relative;height:205px;overflow:hidden;border:4px solid #a8b4c4;border-radius:20px 20px 30px 30px;background:linear-gradient(90deg,#fff9 0 10%,#fff5 30% 80%,#eaf4ff88); }
+.water-fill { position:absolute;right:0;bottom:0;left:0;height:20%;background:linear-gradient(180deg,#8bc9ef,#5ba8dc);transition:height .25s ease;opacity:.86; }
+.air-label,.water-label { position:absolute;left:0;right:0;text-align:center;font-size:10px;font-weight:800;letter-spacing:.12em;color:#57718a; }
+.air-label { top:28%; }.water-label { bottom:14px;color:#fff; }
+.volume-readouts { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px; }
+.volume-readouts>div { padding:13px 15px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px #e8e7e3; }
+.volume-readouts span,.volume-readouts strong { display:block; }.volume-readouts span { color:#758197;font-size:13px; }.volume-readouts strong { margin-top:4px;color:#172554;font-size:22px; }
+.field-error { min-height:20px;color:#b42318;font-size:13px; }
+.measure-row { margin-top:24px;padding-top:18px;border-top:1px solid #e8eaf0; }
+#measure-status { margin:0;color:#53627b; }.frequency-result { color:#e65d0f;font-size:clamp(36px,5vw,58px);font-variant-numeric:tabular-nums; }.frequency-result small { color:#667085;font-size:17px; }
+.bottle-series { border-top:4px solid #315da8!important; }.bottle-series .section-heading p { margin:6px 0 0;color:#718096; }
+.bottle-graph-wrap { margin-top:24px;padding:18px 18px 8px;border-radius:14px;background:#fffaf4; }.graph-heading h3 { margin:0;color:#263b60;font-size:16px; }.graph-heading span { display:flex;align-items:center;gap:6px;color:#68758a;font-size:12px; }.measured-dot { width:9px;height:9px;border-radius:50%;background:#315da8; }.model-line { width:18px;border-top:2px dashed #e87925;margin-left:8px; }
+#bottle-graph { display:block;width:100%;height:290px; }
+.discovery { margin-top:20px;padding:18px 20px;border-left:4px solid #e87925;border-radius:10px;background:#fff4e8; }.discovery h3 { margin:0 0 6px;color:#273b60;font-size:18px; }.discovery p { margin:0;color:#64748b; }
+.prediction-card { border-top:4px solid #e87925!important; }.prediction-card h2 { margin:0 0 7px; }.prediction-result { max-width:620px;padding:14px 16px;border-radius:12px;background:#fff4e8;color:#8a431a;font-weight:700; }.prediction-check { margin-top:15px;padding:14px;border-radius:12px;background:#eef5ff; }.prediction-check button { margin-top:12px; }
+.prediction-data { max-width:720px;margin:16px 0 20px;padding:14px 16px;border-radius:12px;background:#f5f8fd; }.prediction-data>strong { color:#263b60;font-size:14px; }.prediction-points { display:flex;flex-wrap:wrap;gap:8px;margin-top:10px; }.prediction-points span { display:flex;align-items:center;gap:6px;padding:7px 9px;border-radius:8px;background:#fff;color:#385276;font-size:12px;font-weight:650; }.prediction-points i { width:8px;height:8px;border-radius:50%;background:#315da8; }.prediction-model { margin:10px 0 0;font-size:12px; }
+.bottle-tips { background:#fffaf4!important; }.bottle-tips li { margin:8px 0;color:#59677d; }.bottle-reference { margin-top:0; }
+@media(max-width:850px){.bottle-stage{grid-template-columns:1fr;gap:12px}.bottle-illustration{width:125px}.bottle-body{height:170px}.bottle-setup{align-items:start;flex-wrap:wrap}.condition-heading,.measure-row{align-items:flex-start}.bottle-lab .main-navigation{overflow-x:auto}.bottle-stage-card{gap:2px;padding:8px!important}.bottle-stage-card .stage{padding:6px 4px;gap:5px}.bottle-stage-card .stage-icon{flex:0 0 28px;width:28px;height:28px}.bottle-stage-card .stage strong{font-size:11px}.bottle-stage-card .stage small{display:none}.bottle-stage-card .stage-arrow{font-size:13px}}
+@media(max-width:700px){.bottle-lab .hero{grid-template-columns:52px minmax(0,1fr);gap:14px}.bottle-lab .hero-icon{width:48px;height:48px}}
