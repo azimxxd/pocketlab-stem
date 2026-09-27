@@ -47,7 +47,6 @@ export function laptop(root: HTMLElement) {
       <a class="active" href="/pendulum" aria-current="page">Маятник</a>
       <a href="/sound">Увидь свой голос</a>
       <a href="/bottle">Собери музыкальный инструмент</a>
-      <a href="#top">Кнопка 5</a>
     </nav>
   </header>
   <main id="top">
