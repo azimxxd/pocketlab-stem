@@ -83,6 +83,7 @@ export function phone(root: HTMLElement) {
     return saved;
   }
   const active = () => ["CALIBRATING", "READY", "WAITING_FOR_MOTION", "MEASURING"].includes(state);
+  const microphoneRequired = () => experiment === "sound" || experiment === "bottle";
 
   async function updateWake() {
     if (active() && document.visibilityState === "visible" && !wake && "wakeLock" in navigator) {
@@ -125,12 +126,17 @@ export function phone(root: HTMLElement) {
 
   function showMode(next: "pendulum" | "sound" | "bottle") {
     experiment = next;
+    const needsMicrophone = microphoneRequired();
+    const permissionsReady = motionReady && (!needsMicrophone || microphone.ready);
     el("sensor-panel").querySelector("h1")!.textContent = "Карманная лаборатория";
     el("instrument-mode").textContent = next === "sound" ? "Увидь свой голос" : next === "bottle" ? "Собери музыкальный инструмент" : "Маятник";
-    el("permissions").textContent = motionReady && microphone.ready
-      ? "Все датчики разрешены" : "Разрешить датчики и микрофон";
-    (el("permissions") as HTMLButtonElement).disabled=motionReady&&microphone.ready;
-    if (motionReady && microphone.ready) el("permissions-status").textContent = "Датчики движения и микрофон готовы";
+    el("permissions").textContent = permissionsReady
+      ? "Датчики разрешены"
+      : needsMicrophone ? "Разрешить датчики и микрофон" : "Разрешить датчики движения";
+    (el("permissions") as HTMLButtonElement).disabled = permissionsReady;
+    if (permissionsReady) el("permissions-status").textContent = needsMicrophone
+      ? "Датчики движения и микрофон готовы"
+      : "Датчики движения разрешены. Ожидаем показаний…";
     microphone.measure((next === "sound" || next === "bottle") && ["CALIBRATING", "MEASURING"].includes(state));
     if(joined)publishCapabilities();
   }
@@ -304,25 +310,36 @@ export function phone(root: HTMLElement) {
   el("join").onclick = join;
   el("permissions").onclick = async () => {
     const button = el("permissions") as HTMLButtonElement;
+    const needsMicrophone = microphoneRequired();
     button.disabled = true;
     enabledAt = 0;
     lastEvent = 0;
-    // Start both permission requests synchronously from this same tap.
+    // Request only the hardware needed by the selected experiment. Keep each
+    // browser permission request inside the user's direct button gesture.
     const motionRequest = motionReady ? Promise.resolve(permissionMessage) : sensors.enable();
-    const microphoneRequest = microphone.ready ? Promise.resolve() : microphone.enable();
+    const microphoneRequest = !needsMicrophone || microphone.ready
+      ? Promise.resolve()
+      : microphone.enable();
     const [motionResult, microphoneResult] = await Promise.allSettled([motionRequest, microphoneRequest]);
     motionReady = motionResult.status === "fulfilled";
     if (motionResult.status === "fulfilled") permissionMessage = motionResult.value;
     if (motionReady) { enabledAt = performance.now(); lastEvent = 0; }
-    const microphoneReady = microphoneResult.status === "fulfilled" && microphone.ready;
+    const microphoneReady = !needsMicrophone || (microphoneResult.status === "fulfilled" && microphone.ready);
     const motionMessage = motionReady ? "Датчики движения готовы" : `Датчики движения: ${(motionResult as PromiseRejectedResult).reason?.message || "нет доступа"}`;
-    const microphoneMessage = microphoneReady ? "микрофон готов" : `микрофон: ${(microphoneResult as PromiseRejectedResult).reason?.message || "нет доступа"}`;
-    publishCapabilities([motionMessage, microphoneMessage].join("; "));
-    button.disabled = motionReady && microphoneReady;
-    button.textContent = motionReady && microphoneReady ? "Все датчики разрешены" : "Повторить разрешение датчиков";
-    el("permissions-status").textContent = motionReady && microphoneReady
-      ? "Датчики движения и микрофон готовы"
-      : `${motionMessage}; ${microphoneMessage}`;
+    const microphoneMessage = !needsMicrophone
+      ? "микрофон для этого режима не нужен"
+      : microphoneReady ? "микрофон готов" : `микрофон: ${(microphoneResult as PromiseRejectedResult).reason?.message || "нет доступа"}`;
+    publishCapabilities(needsMicrophone ? `${motionMessage}; ${microphoneMessage}` : motionMessage);
+    const permissionsReady = motionReady && microphoneReady;
+    button.disabled = permissionsReady;
+    button.textContent = permissionsReady
+      ? "Датчики разрешены"
+      : needsMicrophone ? "Повторить разрешение датчиков и микрофона" : "Повторить разрешение датчиков";
+    el("permissions-status").textContent = permissionsReady
+      ? needsMicrophone
+        ? "Датчики движения и микрофон готовы"
+        : "Разрешение получено. Проверяем показания датчиков…"
+      : `${motionMessage}${needsMicrophone ? `; ${microphoneMessage}` : ""}`;
   };
 
   document.addEventListener("visibilitychange", () => {
