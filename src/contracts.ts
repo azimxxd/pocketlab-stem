@@ -1,4 +1,4 @@
-import { soundFrameSchema } from "./sound/contracts";
+import { soundFrameSchema } from "./sound/contracts.js";
 import { z } from "zod";
 export type ExperimentType = "pendulum" | "sound" | "bottle";
 export const SENSOR_STALL_TIMEOUT_MS = 10_000;
