@@ -25,8 +25,9 @@ export class SocketClient {
     return true;
   }
   private connect() {
+    const path = import.meta.env.PROD ? "/api/ws" : "/ws";
     const ws = (this.ws = new WebSocket(
-      `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}/ws`,
+      `${location.protocol === "https:" ? "wss:" : "ws:"}//${location.host}${path}`,
     ));
     ws.onopen = () => {
       this.retry = 0;
